@@ -1,0 +1,408 @@
+                                          Low-Complexity Neural Wind Noise Reduction for Audio Recordings
+                                          Hesam Eftekhari1 , Srikanth Raj Chetupalli2 , Shrishti Saha Shetu2 , Emanuël A. P. Habets2 , and Oliver
+                                          Thiergart2
+                                          1 Fraunhofer IIS, Am Wolfsmantel 33, 91058 Erlangen, Germany
+                                          2 International Audio Laboratories Erlangen* , Am Wolfsmantel 33, 91058 Erlangen, Germany
+                                          Emails: {hesam.eftekhari, srikanth.chetupalli, shrishti.saha.shetu, emanuel.habets, oliver.thiergart}@iis.fraunhofer.de
+
+
+
+                                          Abstract                                                                a U-Net-based architecture [12] composed of 2D convolu-
+                                                                                                                  tional layers. However, these DNN-based models are not
+                                          Wind noise significantly degrades the quality of outdoor                designed for frame-by-frame processing and do not meet
+                                          audio recordings, yet remains difficult to suppress in                  the memory and computational complexity constraints of
+                                          real-time on resource-constrained devices. In this work,                embedded hardware. On the other hand, the SE literature
+                                          we propose a low-complexity single-channel deep neu-                    includes several methods that satisfy such design require-
+                                          ral network that leverages the spectral characteristics of              ments (e.g., [13]); however, these approaches are typically
+                                          wind noise. Experimental results show that our method                   optimized for speech-only scenarios and often suppress
+arXiv:2507.01821v1 [eess.AS] 2 Jul 2025
+
+
+
+
+                                          achieves performance comparable to the state-of-the-art                 music and other non-speech acoustic sources.
+                                          low-complexity ULCNet model. The proposed model,                            In this work, we focus on low-complexity single-
+                                          with only 249K parameters and roughly 73 MHz of com-                    channel WNR techniques for real-time applications on em-
+                                          putational power, is suitable for embedded and mobile au-               bedded platforms using DNNs. We aim to directly estimate
+                                          dio applications.                                                       the desired signal by computing a mask, referred to here
+                                                                                                                  as the wind rejection approach. Since the desired signal
+                                                                                                                  in WNR includes all acoustic sources except wind noise,
+                                          1 Introduction                                                          we also investigate a wind extraction approach, where the
+                                          A microphone captures a range of acoustic sources present               DNN estimates a mask for the wind noise itself, which is
+                                          in the scene. In an outdoor setting, it may also pick up                then removed from the microphone signal to obtain the de-
+                                          noise induced by the wind flowing past it. Devices such as              sired signal. Wind noise is generally concentrated in low-
+                                          mobile phones, action cameras, wearables, and hearables                 frequency regions with negligible presence in frequencies
+                                          frequently encounter wind noise. The turbulent nature of                above 4 kHz. Motivated by this observation, we propose
+                                          wind flow results in a high-amplitude signal at low fre-                a dual encoder architecture that emphasizes low-frequency
+                                          quencies, leading to undesirable distortions in the recorded            bands while focusing less on higher frequency bands. This
+                                          signal. Hence, effective wind noise reduction (WNR) has                 design is integrated into the low-complexity ULCNet ar-
+                                          become essential to modern consumer audio devices. The                  chitecture originally proposed for SE task [13]. Experi-
+                                          increasing adoption of wearables and hearables further am-              mental results using speech and music sources validate the
+                                          plifies the demand for low-complexity WNR solutions.                    effectiveness of the proposed approach for WNR across
+                                          Although the WNR task resembles speech enhancement                      varied acoustic scenes.
+                                          (SE), it differs in its objective: the target signal consists of
+                                          all sound sources, excluding the wind noise component.                  2 Problem Formulation
+                                               Several single-channel approaches [1–8] and multi-                 Consider a recording scenario where a single microphone
+                                          channel methods [9–11] utilizing traditional signal pro-                captures an acoustic scene comprising arbitrary sound
+                                          cessing and deep neural network (DNN)-based techniques                  sources and wind noise. The signal model is expressed
+                                          have been proposed. Earlier approaches used techniques                  as,
+                                          such as adaptive post-filtering in the time domain [1] and
+                                                                                                                                                Ib
+                                          methods derived from artificial bandwidth extension [2].                                              ÿ
+                                          Other approaches [3, 4] concentrated on the estimation of                             xrns “ srns `        bj rns `wrns,
+                                                                                                                                                 j“1                       (1)
+                                          the noise power spectral density (PSD), which is used to                                     looooooooomooooooooon
+                                          obtain spectral gains for WNR. Wind noise exhibits dis-                                             drns
+                                          tinct statistical properties in comparison to other acoustic
+                                          signals, which are leveraged for the PSD estimation. In this             where xrns denotes the recorded microphone signal at dis-
+                                          context, multi-microphone approaches [9–11], which ex-                  crete time index n, composed of the desired signal drns
+                                          ploit the spatial characteristics of the received wind noise,           and additive wind noise wrns. The desired signal drns
+                                          have proven to be successful.                                           may consist of speech components srns and Ib non-speech
+                                               In the deep learning context, a bi-directional long                components bj rns, representing music, ambient noise, or
+                                          short-term memory (LSTM)-based approach was first pro-                  other acoustic sources.
+                                          posed in [5]. In [6], the authors investigated the estimation               In conventional DNN-based SE approaches [13, 14], a
+                                          of separate masks for the wind and desired signal com-                  DNN Fθ is trained to estimate the clean speech signal p srns
+                                          ponents, followed by soft masking based on the auditory                 from the observed noisy signal xrns using mapping, mask-
+                                          masking properties. More recent studies [7, 8] employed                 ing, or deep filtering methods [15]. This formulation does
+                                                                                                                  not account for the presence of other non-speech compo-
+                                              * A joint institution of Fraunhofer IIS and Friedrich-Alexander-          ř Ib
+                                          Universität Erlangen-Nürnberg (FAU), Germany.                           nents j“   1 bj rns. In this work, we define wind noise as
+                                                The authors thank the Erlangen Regional Computing Center (RRZE)   the undesired signal, while treating all other signal compo-
+                                          for providing compute resources and technical support.                  nents comprising speech or non-speech sound sources as
+              x             ”         ı          ´       d̂                          8k
+                             Xr r, X
+                                   ri
+                                                                                     6k
+
+
+
+
+                                                                    Frequency (Hz)
+              Input      X
+                         rp
+                            Intermediate      inverse
+         preprocessing          mask         power-law                               4k
+                             M
+                             Ďm
+            X
+            rm                                                                       2k
+                                Fully        Masking
+         Channel-wise        Connected
+                                                                                     0k 0   0.5     1     1.5      2   2.5       3 0   0.5   1     1.5      2       2.5   3
+             feature                                                                                    Time (s)                                 Time (s)
+          reorientation                      Pointwise
+                               Concat                                                             (a) Noisy Music                                (b) Wind
+                                               Conv
+  X
+  r c-low     Xr c-high                                                     Figure 2: (a) A Jazz music signal, corrupted by strong (b)
+                         Ch   Hl
+                                                                            wind noise, limited to the 2 ´ 3 kHz frequency range.
+         LF           HF
+                                GRU            CNN
+      encoder encoder                                                       Fourier transform (STFT) domain X and then into a
+                                                                            power-law compressed representation X    r , and extracts
+                  First stage      Cl       Second stage                    magnitude and phase features, as described in [13],
+      Figure 1: The proposed WindNetLite model.                                           r “ signpℜpXqq|ℜpXq|α ` j ¨ signpℑpXqq|ℑpXq|α ,
+                                                                                          X                                                                               (5)
+desired, i.e., given the noisy signal xrns, the goal in WNR
+is to estimate the desired signal drns.                                                                    b                                       ˜        ¸
+     We formulate the wind noise reduction (WNR) prob-                                                           r 2,
+                                                                                                             r2 `X                                     X
+                                                                                                                                                       ri
+                                                                                                  X
+                                                                                                  rm “      X      r         i    X
+                                                                                                                                  r p “ arctan                  .         (6)
+lem using two distinct paradigms: wind rejection and wind                                                                                              X
+                                                                                                                                                       rr
+extraction. In wind rejection, a DNN denoted as Frej di-                                        ?
+rectly estimates the desired signal,                                         Here, j represents ´1, α P r0, 1s denotes the power-law
+                                                                            compression factor, and the sign operator ensures the orig-
+                      drns
+                      p    “ Frej pxrnsq.                     (2)           inal sign of the real and imaginary parts is preserved in
+                                                                            Xr r and X
+                                                                                     r i . The magnitude feature Xr m P RBˆT ˆF is fur-
+  However, this approach, especially when combined                          ther reoriented along the channel dimension to reduce the
+with masking-based desired signal reconstruction method,                    frequency dimension, which aids in reducing the computa-
+often results in signal distortions, particularly
+                                               “     in low
+                                                        ‰                   tional cost of convolutional operations [13]. The reoriented
+signal-to-noise  ratio (SNR) scenarios where     }drns}2 !                                                  r c P RBˆT ˆLˆN , and con-
+  “          ‰                               E                              channel-wise representation is X
+E }wrns}2 [14, 16]. Therefore, we alternatively investi-                    sidering only the frequency axis, it is defined as:
+gate a two-stage approach, referred to as wind extraction.                                                      ˆ!                              )N ´1 ˙
+In the first stage, a DNN, denoted by Fext , estimates the                                   X
+                                                                                             r c “ stack          Xr m r. . . , i ¨ L
+                                                                                                                                    r : i¨L
+                                                                                                                                          r ` Ls        ,                 (7)
+wind noise component                                                                                                                                     i“0
+
+                     wrns
+                     p    “ Fext pxrnsq.                      (3)            where L is the sub-band length, N is the total number of
+                                                                            sub-bands, r is the overlap ratio, and L   r fi Lp1 ´ rq.
+ Subsequently, the desired signal is recovered using tradi-                      Wind, as illustrated in Fig. 2(b), typically exhibits high
+tional signal processing methods such as post-filtering [1],                energy in the low-frequency range and negligible energy at
+or direct subtraction [17] as                                               frequencies higher than 4 kHz. Motivated by this, we pro-
+                                                                            pose a dual-encoder architecture with separate encoders for
+                     drns
+                     p    “ xrns ´ wrns.
+                                   p                          (4)           low- and high-frequency regions. The magnitude features
+                                                                            Xr c are first split into low- and high-frequency components,
+                                                                            where X  r c-low contains the first 5 sub-bands, and X    r c-high
+                                                                            contains the remaining sub-bands. These components are
+3 Proposed Method                                                           processed in parallel by two encoder blocks, termed the
+In our work, we consider a real-time audio application sce-                 LF encoder and HF encoder, each consisting of convolu-
+nario that requires causal and low-complexity DNN pro-                      tional layers followed by batch normalization and ReLU
+cessing. To this end, we adopt the ULCNet-based model                       activation. This design allows the LF encoder to be pa-
+                                                                            rameterized with higher complexity, as wind noise is more
+architecture [13], originally proposed for noise reduction                  concentrated in the lower sub-bands, while the HF encoder
+and shown to be effective in related tasks, such as acoustic                uses relatively fewer parameters. Both encoders employ
+echo cancellation and dereverberation [18–20]. ULCNet                       a flatten layer to reshape frequency and channel axes into
+uses a two-stage process of first estimating a real-valued                  one-dimensional vectors. The output features of the low-
+magnitude mask and then refining it to a phase-enhanced                     and high-frequency encoder modules LF encoder and HF
+complex mask. We modify this architecture by adding                         encoder are denoted as Cl and Ch respectively. More-
+two parallel encoder blocks focusing on low and high fre-                   over, Cl is further processed using a temporal GRU layer.
+quency regions, respectively, to extract separate intermedi-                Subsequently, the outputs are concatenated and passed to a
+ate features by exploiting wind noise characteristics. The                  fully connected layer with Sigmoid activation to estimate
+resulting architecture, referred to as WindNetLite, is shown                the intermediate real magnitude mask M      Ďm,
+in Fig. 1. In the following, we describe the WindNetLite                                                   rHl , Ch s “ rGRUl pCl q, Ch s
+architecture in detail.                                                                                                                                                   (8)
+                                                                                                                M
+                                                                                                                Ď m “ WrHl , Ch s ` b,
+3.1 DNN Processing                                                          where W and b represent the learnable weight matrix and
+In our architecture, the input preprocessing block first                    bias vector of the fully-connected (linear) layer, respec-
+transforms the time-domain signal xrns to short-time                        tively. The mask M Ď m is used to compute intermediate
+complex features as described in [13],                                 −2.2
+
+                                                                       −2.3
+                      ´    ¯                        ´   ¯
+      Y
+      rr “ M
+           Ď m ¨ cos X
+                     rp        and Y
+                                   ri “ M
+                                        Ď m ¨ sin X
+                                                  rp .       (9)
+                                                                       −2.4
+These intermediate features Yr r and Yr i are then concate-
+                                                                       −2.5
+nated along the channel dimension and passed through a
+
+
+
+
+                                                                    
+lightweight CNN architecture to estimate a complex mask                −2.6
+M. The mask is used to reconstruct the power-law com-                  −2.7
+pressed estimate of either the desired clean signal Dr (for
+                                                                       −2.8
+wind rejection) or the wind component W (for wind ex-
+                                          Ă
+traction) as follows,                                                  −2.9
+                                                                           0.3    0.4      0.5       0.6       0.7    0.8      0.9     1.0
+                                      ȷpX
+                                        r p `Mp q                                                          α
+             D
+             r or W
+                  Ă “X
+                     r m ¨ Mm ¨ e                   ,       (10)          Speech (Rej.)     Music (Rej.)       Speech (Ext.)     Music (Ext.)
+
+where Mm and Mp denote the magnitude and phase com-
+ponents of the complex-valued mask M, and X   r m and Xrp          Figure 3: Leakage L versus Power-law factor α for
+are as defined in (6). Finally, after applying power-law           speech and instrumental music for extraction and rejection
+decompression using Eq. 5 with a decompression factor              modes.
+β “ α1 , followed by inverse STFT, we obtain the estimated
+time-domain desired signal d̂rns or wind noise ŵrns.              and validation datasets, we mixed the recorded wind noise
+                                                                   with samples from the AudioSet dataset [21] at signal-to-
+4 Experimental Setup                                               noise ratio (SNR) levels ranging from ´20 to 20 dB. Au-
+                                                                   dioSet includes a diverse range of audio categories such as
+4.1 Model Configuration and Baseline                               speech, music, and background noises (e.g., roadside traf-
+                                                                   fic, barking, and chirping). The signals from the ’wind’
+WindNetLite: The architecture follows ULCNet[13]-                  category in AudioSet are excluded from the dataset com-
+based convolutional recurrent network design with paral-           position, to prevent data leakage. The resulting training
+lel encoder blocks. The channel-wise feature reorientation         dataset had a total duration of approximately 200 hours.
+operates with L “ 40 and an overlap factor of r “ 0.4, re-              We created two test sets, each representative of a dis-
+sulting in N “ 10 sub-bands. The input features to both            tinct target signal type commonly encountered in audio
+the low-frequency (LF) and high-frequency (HF) encoders            recording applications: speech and instrumental music.
+have a shape of pB, T, 40, 5q. The LF encoder consists             For the speech test set, the desired signals were taken from
+of four convolutional layers with t32, 64, 96, 128u filters.       the VCTK Voice Bank corpus [22], while the instrumen-
+Since the higher frequency range does not require full res-        tal music samples were drawn from the MUSDB18 cor-
+olution, an average pooling layer with a pool size and             pus [23]. These clean signals were mixed with previously
+stride of p1, 2q is applied to the HF input before encoding.       unseen recorded wind noise at SNR levels randomly sam-
+The HF encoder comprises three convolutional layers with           pled from the set t´20, dB, ´10, dB, 0, dB, 10, dB, 20, dBu.
+t8, 16, 64u filters. All convolutions are performed with a         Each test set consisted of 200 samples with a 10 s duration
+kernel size of p1, 3q and a stride of p1, 2q, except for the       per sample.
+first layer, which uses a stride of p1, 1q. The extracted fea-
+tures are subsequently processed using point-wise convo-
+lution layers, with 32 filters for LF and 16 filters for HF, to
+                                                                   4.3 Training Details
+produce the final convolutional features: Cl P RBˆT ˆ5ˆ32          We used an STFT with an FFT length of 512, and a Hann
+and Ch P RBˆT ˆ5ˆ16 , respectively. The LF feature Cl is           window length of 32 ms, with 50% overlap between suc-
+further processed through a temporal GRU block with 128            cessive frames, which resulted in 257 frequency bins at
+units, yielding Hl P RBˆT ˆ128 . These features are then           16kHz sampling rate. The MSE computed between the
+concatenated and passed through a fully connected layer            ground truth signal STFT and its estimate computed by the
+with 257 output units. In the second stage, the CNN con-           DNN was used as the loss function, as is done in [13] for
+sists of 2 convolutional layers with 32 filters each, followed     noise reduction. The Adam optimizer was used with an
+by a point-wise convolution layer, which outputs the final         initial learning rate (LR) of 0.0004. The training frame-
+complex mask.                                                      work also utilized a scheduler to reduce LR by a factor of
+WindNet: As the baseline, we adapted the ULCNet model,             10 every three epochs. The batch size was 400 and each
+which we refer to as WindNet. In this work, we remove the          training example had a duration of 3 s.
+bidirectional frequency GRU layer and reduce the num-
+ber of temporal GRU layers in each sub-band from 2 to              4.4 Evaluation Metrics
+1. These modifications are intended to provide a baseline          To evaluate different methods, we used PEAQ [24], PESQ
+model, WindNet, with complexity comparable to the pro-             [25] and SI-SDR [26] on the desired signal as the pri-
+posed WindNetLite.                                                 mary objective metrics. For a more detailed analysis of
+                                                                   wind noise leakage, we employed the log-spectral distance
+4.2 Training and Test Datasets                                     (LSD) metric to compute the wind noise leakage metric
+We trained the proposed WindNet and WindNetLite in both            L , defined as follows:
+the rejection and extraction modes. To compose the train-                    g
+                                                                             f    T ÿ
+                                                                                    F ´
+ing and test datasets, we recorded real wind noise in an out-                f 1 ÿ          ˇ     ˇ            ˇ¯ 2
+                                                                       L fi ´e
+                                                                                                         ˇ
+                                                                                        log ˇDt,f ˇ ´ log Wt,f
+                                                                                                               ˇ ,                              (11)
+                                                                                            ˇp ˇ         ˇ
+door environment using 20 different microphones, corre-                        TF
+                                                                                          t“1 f “1
+sponding to a total duration of 10 hours. For both training
+         Table 1: Performance on the test set for scenarios with speech and instrumental music used as targets.
+                                                                        Speech                            Ins. Music
+      Processing           PLF Params RTF (%)     MHz
+                                                          PESQ SI-SDR Leakage (L ) PEAQ SI-SDR Leakage (L )
+      Noisy                 -      -      -         -      1.80        3.03          -          -3.01     1.56           -
+      ULCNet               0.3   688K   0.127   182 MHz    2.23       12.75        -1.76          -         -            -
+      WindNet (Rej.)       0.3   365K   0.061    87 MHz    2.26       12.71        -2.72        -2.32     6.65         -2.90
+      WindNet (Ext.)       1.0   365K   0.061    87 MHz    2.26       13.90        -2.32        -2.59     7.58         -2.75
+      WindNetLite (Rej.)   0.3   249K   0.051   73 MHz     2.24       12.27        -2.81        -2.35     6.30         -2.80
+      WindNetLite (Ext.)   1.0   249K   0.051   73 MHz     2.23       14.31        -2.43        -2.57     7.67         -2.60
+
+
+ where Dp t,f is the estimated desired signal complex STFT                                                                  Noisy
+coefficient at time frame t and frequency bin f , Wt,f is                                                                   WindNetLite (Rej.)
+                                                                                                                            WindNet (Rej.)
+the noise (wind) component coefficient, and T and F de-                                                                     WindNetLite (Ext.)
+note the total number of time frames and frequency bins,                                                                    WindNet (Ext.)
+                                                                                                                            Clean
+respectively. The negative sign before LSD is included to
+emphasize that a larger distance between the desired sig-
+nal and noise corresponds to less leakage, indicating more
+effective wind noise reduction.
+                                                                  0           20           40            60            80                100
+5 Results                                                                                       rating_score
+
+5.1 Impact of Power-Law Factor                                           Figure 4: Results of MUSHRA listening test
+Our preliminary experiments have shown that the power-                In terms of computational complexity, both WindNet
+law compression described in Section 3 significantly af-          and WindNetLite significantly reduce computational costs
+fects performance. Although the power law factor α “ 0.3          compared to ULCNet, as evident from their parameter
+was recommended in [13] for speech enhancement, this              count and real-time factors (RTFs) measured on a single-
+value may not be optimal for WNR depending on the target          core Cortex A53 1.43 GHz. As reported in Table 1, Wind-
+type, i.e., rejection or extraction. Thus, we evaluated WNR       Net achieves an RTF of 0.061 (87 MHz), and WindNetLite
+for α from 0.3 to 1.0 in 0.1 increments for both modes.           reaches 0.051 (73 MHz) .
+Figure 3 shows the wind noise leakage L as a function
+of α. For rejection, α “ 0.3 achieves the lowest leakage,
+whereas α “ 1.0 performs better for extraction. Informal
+                                                                  5.3 Subjective Evaluation
+listening tests confirmed these results, so we used α “ 0.3       To assess the subjective performance differences, we con-
+for rejection and α “ 1.0 for extraction in all subsequent        ducted a MUSHRA listening test. The test is carried out
+experiments.                                                      using the WebMUSHRA[27] framework, and the listeners
+                                                                  were asked to rate the overall performance based on the
+5.2 Performance Comparison                                        signal quality and introduced distortions. In total, 10 lis-
+                                                                  teners took part in the listening test, which consisted of
+Table 1 presents the WNR performance of our proposed              10 samples with signal-to-noise ratios ranging from ´8 to
+WindNetLite and the baseline in both rejection and ex-            ´20 dB. The listeners were asked to rate the clean signal
+traction modes, compared to the noisy signal. On the              as 100, which was provided as the reference. As illustrated
+speech test set, WindNet achieves the highest PESQ score          in Fig. 4, WindNet in extraction mode attained the highest
+of 2.26, while WindNetLite matches ULCNet with a com-             mean rating of 66.29 while the other three models achieved
+parable score of 2.23. In terms of SI-SDR, extraction             comparable results. The listening samples can be found at
+method outperform the rejection method, both WindNet              https://fhgwnr.github.io/AIWNR/.
+and WindNetLite yield higher SI-SDR values (13.90 and
+14.31), whereas in rejection mode they achieve lower leak-
+age (´2.72 and ´2.81). The ULCNet performs slightly               6 Conclusions
+lower than other models. However, it was trained for
+                                                                  We have shown that leveraging wind noise spectral char-
+general speech enhancement rather than targeted WNR.
+                                                                  acteristics enables designing a very low-complexity DNN
+On the instrumental music test set, rejection mode yields
+                                                                  model suitable for resource-constrained embedded de-
+higher PEAQ scores (´2.32 for WindNet, ´2.35 for Wind-
+                                                                  vices. Our proposed WindNetLite model requires only 40%
+NetLite). In extraction mode, WindNetLite slightly out-
+                                                                  of the RTF of the SOTA ULCNet and 84% of the baseline
+performs WindNet in SI-SDR, with scores of 7.67 dB and
+                                                                  WindNet model, while achieving comparable results. We
+7.58 dB, respectively. Leakage metrics show that rejection
+                                                                  also show that it is important to study different hyperpa-
+methods outperform extraction, with scores of ´2.90 for
+                                                                  rameters and signal reconstruction methods to achieve a
+WindNet and ´2.80 for WindNetLite. In informal listening,
+                                                                  better trade-off between signal distortion and suppression
+we observe that the extraction mode introduces less distor-
+                                                                  quality.
+tion to the target signal, while the rejection mode provides
+stronger wind suppression. As a result„ the extraction
+method always achieves better SI-SDR results whereas the
+rejection method yields better leakage scores, since the
+leakage metric is more biased toward noise suppression.
+References                                                                Moore, “Sixty years of frequency-domain monaural speech
+                                                                          enhancement: From traditional to deep learning methods,”
+ [1] E. Nemer and W. Leblanc, “Single-microphone wind noise               Trends in Hearing, vol. 27, 2023.
+     reduction by adaptive postfiltering,” in Proc. IEEE Work-       [16] X. Hao, X. Su, S. Wen, Z. Wang, Y. Pan, F. Bao,
+     shop on Applications of Signal Processing to Audio and               and W. Chen, “Masking and inpainting: A two-stage
+     Acoustics (WASPAA), pp. 177–180, 2009.                               speech enhancement approach for low SNR and non-
+ [2] C. M. Nelke, N. Nawroth, M. Jeub, C. Beaugeant, and                  stationary noise,” IEEE International Conference on Acous-
+     P. Vary, “Single microphone wind noise reduction using               tics, Speech and Signal Processing (ICASSP), pp. 6959–
+     techniques of artificial bandwidth extension,” in Proc. Euro-        6963, 2020.
+     pean Signal Processing Conf. (EUSIPCO), pp. 2328–2332,          [17] S. Kuroiwa, Y. Mori, S. Tsuge, M. Takashina, and F. Ren,
+     2012.                                                                “Wind noise reduction method for speech recording using
+ [3] C. M. Nelke, P. A. Naylor, and P. Vary, “Corpus based re-            multiple noise templates and observed spectrum fine struc-
+     construction of speech degraded by wind noise,” in Proc.             ture,” in 2006 International Conference on Communication
+     European Signal Processing Conf. (EUSIPCO), pp. 864–                 Technology, pp. 1–5, 2006.
+     868, 2015.                                                      [18] S. S. Shetu, N. K. Desiraju, J. M. M. Aponte, E. A. Habets,
+ [4] C. M. Nelke, N. Chatlani, C. Beaugeant, and P. Vary, “Sin-           and E. Mabande, “A hybrid approach for low-complexity
+     gle microphone wind noise PSD estimation using signal                joint acoustic echo and noise reduction,” in Proc. Intl. Work-
+     centroids,” in Proc. IEEE Intl. Conf. on Acoustics, Speech           shop Acoust. Signal Enhancement (IWAENC), 2024.
+     and Signal Processing (ICASSP), pp. 7063–7067, 2014.            [19] S. S. Shetu, N. K. Desiraju, W. Mack, and E. A. Ha-
+ [5] J. Lee, K. Kim, T. Shabestary, and H.-G. Kang, “Deep                 bets, “Align-ULCNet: Towards Low-Complexity and Ro-
+     bi-directional long short-term memory based speech en-               bust Acoustic Echo and Noise Reduction,” arXiv preprint
+     hancement for wind noise reduction,” in Proc. Hands-                 arXiv:2410.13620, 2024.
+     free Speech Communications and Microphone Arrays                [20] N. K. Rao, S. R. Chetupalli, S. S. Shetu, E. A. Habets, and
+     (HSCMA), pp. 41–45, 2017.                                            O. Thiergart, “Low-complexity neural speech dereverber-
+ [6] H. Bai, F. Ge, and Y. Yan, “DNN-based speech enhance-                ation with adaptive target control,” in ICASSP 2025-2025
+     ment using soft audible noise masking for wind noise reduc-          IEEE International Conference on Acoustics, Speech and
+     tion,” China Communications, vol. 15, no. 9, pp. 235–243,            Signal Processing (ICASSP), pp. 1–5, IEEE, 2025.
+     2018.                                                           [21] J. F. Gemmeke, D. P. Ellis, D. Freedman, A. Jansen,
+ [7] G. W. Lee, K. M. Jeon, and H. K. Kim, “U-Net-based                   W. Lawrence, R. C. Moore, M. Plakal, and M. Ritter, “Au-
+     single-channel wind noise reduction in outdoor environ-              dio set: An ontology and human-labeled dataset for audio
+     ments,” in Proc. IEEE Intl. Conf. on Consumer Electronics            events,” in 2017 IEEE international conference on acous-
+     (ICCE), pp. 1–2, 2020.                                               tics, speech and signal processing (ICASSP), pp. 776–780,
+ [8] K.-Y. Lin, F.-M. Lai, and H.-Y. Chang, “Wind noise reduc-            IEEE, 2017.
+     tion strategy in hearing aids through U-Net deep learning       [22] J. Yamagishi, C. Veaux, and K. MacDonald, “CSTR VCTK
+     and microphone enclosure design,” IEEE Sensors Journal,              Corpus: English Multi-speaker Corpus for CSTR Voice
+     vol. 24, no. 11, pp. 18307–18316, 2024.                              Cloning Toolkit (version 0.92), [sound].,” University of
+ [9] S. Franz and J. Bitzer, “Multi-channel algorithms for wind           Edinburgh. The Centre for Speech Technology Research
+     noise reduction and signal compensation in binaural hearing          (CSTR), 2019.
+     aids,” in Proc. Intl. Workshop Acoust. Signal Enhancement       [23] Z. Rafii, A. Liutkus, F.-R. Stöter, S. I. Mimilakis, and
+     (IWAENC), 2010.                                                      R. Bittner, “The MUSDB18 corpus for music separation,”
+[10] P. Thuene and G. Enzner, “Maximum-likelihood approach                Dec. 2017.
+     to adaptive multichannel-wiener postfiltering for wind-         [24] T. Thiede, W. C. Treurniet, R. Bitto, C. Schmidmer,
+     noise reduction,” in ITG Symp. on Speech Communication,              T. Sporer, J. G. Beerends, and C. Colomes, “PEAQ-The
+     pp. 1–5, 2016.                                                       ITU standard for objective measurement of perceived audio
+[11] D. Mirabilii and E. A. P. Habets, “Spatial coherence-aware           quality,” Journal Audio Eng. Soc., vol. 48, no. 1/2, pp. 3–29,
+     multi-channel wind noise reduction,” IEEE/ACM Trans. Au-             2000.
+     dio, Speech, Lang. Process., vol. 28, pp. 1974–1987, 2020.      [25] A. W. Rix, J. G. Beerends, M. P. Hollier, and A. P.
+[12] O. Ronneberger, P. Fischer, and T. Brox, “"U-Net: Convo-             Hekstra, “Perceptual evaluation of speech quality (PESQ)-
+     lutional Networks for Biomedical Image Segmentation",”               a new method for speech quality assessment of tele-
+     in Medical Image Computing and Computer-Assisted Inter-              phone networks and codecs,” IEEE international confer-
+     vention – MICCAI, (Cham), pp. 234–241, Springer Interna-             ence on acoustics, speech, and signal processing. Proceed-
+     tional Publishing, 2015.                                             ings (ICASSP), vol. 2, pp. 749–752, 2001.
+[13] S. S. Shetu, S. Chakrabarty, O. Thiergart, and E. Mabande,      [26] J. Le Roux, S. Wisdom, H. Erdogan, and J. R. Hershey,
+     “Ultra low complexity deep learning based noise suppres-             “SDR–half-baked or well done?,” in Proc. IEEE Intl. Conf.
+     sion,” in Proc. IEEE Intl. Conf. on Acoustics, Speech and            on Acoustics, Speech and Signal Processing (ICASSP),
+     Signal Processing (ICASSP), Apr. 2024.                               pp. 626–630, 2019.
+[14] S. S. Shetu, E. A. Habets, and A. Brendel, “Comparative         [27] M. Schoeffler, F.-R. Stöter, B. Edler, and J. Herre, “Towards
+     Analysis of Discriminative Deep Learning-Based Noise Re-             the next generation of web-based experiments: A case study
+     duction Methods in Low SNR Scenarios,” in Proc. Intl.                assessing basic audio quality following the itu-r recommen-
+     Workshop Acoust. Signal Enhancement (IWAENC), 2024.                  dation bs. 1534 (mushra),” in 1st Web Audio Conference,
+[15] C. Zheng, H. Zhang, W. Liu, X. Luo, A. Li, X. Li, and B. C.          pp. 1–6, 2015.
+

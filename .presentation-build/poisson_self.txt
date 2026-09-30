@@ -1,0 +1,571 @@
+                                                           Poisson2Sparse: Self-Supervised
+                                                       Poisson Denoising From a Single Image
+
+                                           Calvin-Khang Ta1,?, Abhishek Aich1,?, Akash Gupta2,?, Amit K. Roy-Chowdhury1
+                                                                     1
+                                                                  University of California, Riverside, 2 Vimaan AI
+                                                            {cta003@, aaich001@, agupt013@, amitrc@ece.}ucr.edu
+arXiv:2206.01856v2 [eess.IV] 27 Jun 2022
+
+
+
+
+                                                    Abstract. Image enhancement approaches often assume that the noise is
+                                                    signal independent, and approximate the degradation model as zero-mean
+                                                    additive Gaussian. However, this assumption does not hold for biomedical
+                                                    imaging systems where sensor-based sources of noise are proportional to
+                                                    signal strengths, and the noise is better represented as a Poisson process. In
+                                                    this work, we explore a sparsity and dictionary learning-based approach and
+                                                    present a novel self-supervised learning method for single-image denoising
+                                                    where the noise is approximated as a Poisson process, requiring no clean
+                                                    ground-truth data. Specifically, we approximate traditional iterative optimiza-
+                                                    tion algorithms for image denoising with a recurrent neural network that
+                                                    enforces sparsity with respect to the weights of the network. Since the sparse
+                                                    representations are based on the underlying image, it is able to suppress
+                                                    the spurious components (noise) in the image patches, thereby introducing
+                                                    implicit regularization for denoising tasks through the network structure.
+                                                    Experiments on two bio-imaging datasets demonstrate that our method
+                                                    outperforms the state-of-the-art approaches in terms of PSNR and SSIM.
+                                                    Our qualitative results demonstrate that, in addition to higher performance
+                                                    on standard quantitative metrics, we are able to recover much more subtle
+                                                    details than other compared approaches. Our code is made publicly available
+                                                    at https://github.com/tacalvin/Poisson2Sparse
+
+
+                                           1     Introduction
+                                           Biomedical image denoising is a challenging inverse problem of recovering a clean
+                                           noise-free image from its corresponding corrupted version. Current denoising strategies
+                                           [4, 28] assume that most prevalent noisy images can be modeled with additive Gaussian
+                                           noise. Though this assumption shows reasonable performance for some applications,
+                                           it is physically unrealistic for biomedical images as the noise varies proportionally to
+                                           the signal strength and is signal-dependent [12]. As the image acquisition process is
+                                           discrete in nature, the data captured by the imaging sensors are often corrupted by
+                                           shot noise which can be modeled as a Poisson Process [19, 25]. Thus, Poisson denoising
+                                           methods are of utmost importance in biomedical image processing and analysis.
+                                                Supervised deep learning approaches are proven to be effective for image denoising
+                                           tasks [4, 28] and are mostly developed on sophisticated neural networks. The perfor-
+                                           mance of such approaches heavily relies on the availability of large datasets to train
+                                           ?
+                                               joint first authors
+2       C.K. Ta et al.
+
+the networks. These large-scale datasets often involve data pairs of a clean image,
+X, and a noisy image, X0. However in most practical settings, such as bio-imaging
+[2], it is difficult to obtain such data pairs. Hence in order to tackle such scenarios,
+self-supervised internal learning methods [17] have been introduced that attempt
+to employ randomly-initialized neural networks to capture low-level image statistics.
+Such networks are used as priors to solve standard inverse problems such as denoising
+for single images without requiring its clean counterpart.
+
+Related Works. The general supervised approach for using deep learning based
+denoisers is to use Convolutional Neural Networks (CNNs) and given a dataset of
+clean and noisy images, to learn the mapping between them [1, 4, 9, 28]. Recent
+works in self-supervised learning [15, 16, 27] have shown that even without the use of
+explicit ground truth, deep learning models can offer surprisingly strong performance
+in a range of tasks. Our work is largely inspired by works such as the Deep Image
+Prior [17] or Self2Self [20] in which a deep learning model is trained directly on a
+single test image with no additional datasets. The core assumption of such works is
+that the network is implicitly acting as the regularizer and empirical results show the
+network resists fitting to noise. Given such advantages of internal learning methods, we
+propose a novel self-supervised approach to denoise biomedical images that follow the
+Poisson noise model. Building on the implicit regularization of a network, we utilize
+sparse representations through the network design to handle Poisson Noise. Different
+from prior works [4, 28], we consider the scenario where only a single noisy image
+is collected with no corresponding ground-truth clean image and the noise is Poisson
+distributed. We employ the sparse representations because, intuitively, an image will
+contain many recurrent patches and by finding a sparse representation of the image
+patches, we can represent it as a linear combination of elements in a dictionary. By
+utilizing this sparse coding framework, the dictionary elements will contain the basis
+vectors which minimize the reconstruction error and suppress the noise.
+
+Contributions. We present a novel method for single image Poisson denoising which
+leverages a neural network’s inductive bias. Specifically, we use the neural network to
+learn the dictionary elements that are resistant to the input noise by modeling similar
+and repetitive image patches. We then utilize sparse representations to reconstruct the
+image through learned dictionaries and further suppress input noise. By leveraging
+the internal learning strategy, our method gains two key advantages: 1) we only need
+a single noisy input image which is desirable in many biomedical applications where
+data is scarce, and 2) we can train our model in an entirely self-supervised manner
+with no ground-truth which makes our approach extremely practical. Experiments
+show our approach is able to outperform existing state-of-the-art methods significantly.
+We illustrate our method in Figure 1 and summarize the same in Algorithm 1 in the
+supplemental material.
+
+2    Proposed Methodology: Poisson2Sparse
+Problem Statement. Given a single Poisson noisy input image, we aim to generate
+the corresponding clean image. We propose to utilize the patch recurrence property in
+         Poisson2Sparse: Self-Supervised Poisson Denoising From a Single Image       3
+
+an image to learn a dictionary that can be utilized to generate a sparse representation
+such that the clean image can be recovered. The dictionary elements will ideally
+represent a set of over-complete basis functions that can well represent the image.
+The sparse representation is then used to reconstruct the image using the learned
+dictionary to suppress the noise present in the input image [8, 22]. Let the Poisson
+noisy image be represented by X0 ∈ Rd×d and its corresponding vectorized form
+                     2
+denoted by x0 ∈Rd , where d is the image dimension size. Our objective is to learn
+a dictionary to obtain sparse representation of X0 that can be utilized to recover
+an estimate of the clean image X.c To this end, we incorporate an unrolled iterative
+optimization algorithm approximated using a neural network to learn the dictionary
+and decompose the noisy image representation into a sparse code. In this section,
+we first derive the dictionary-based sparse representation learning algorithm for the
+                                                                           2
+vectorized image, where we represent the learnable dictionary as D ∈Rd ×k and the
+sparse vector as α∈Rk×1. Here, k is the number of elements in α. Next, we leverage
+the Convolution Sparse Coding model [3] to obtain an optimization solution where the
+dictionary is independent of the vectorized image dimension. This is done by changing
+the application of the dictionary Dα from a matrix-vector product into a convolution
+with M dictionaries D ∈Rk×k around M sparse feature maps A∈Rd×d [3].
+
+Poisson-based Optimization Regularizer. We assume that the pixel values of
+the noisy vectorized image x0 are Poisson distributed random variables parameterized
+by pixel values of the ground truth vectorized image x at every ith index of the image.
+This allows x0[i] to be modeled as x0[i] ∼ P(x[i]) [8, 22] where P is the Poisson
+process defined as follows:
+                                          x[i]x0 [i]exp(−x[i])
+                          Px[i](x0[i])=                                            (1)
+                                                  x0[i]!
+                                             b, we maximize the log-likelihood of
+In order to estimate a denoised clean vector x
+(1). The maximum log-likelihood estimation for clean vector recovery is performed
+by minimizing the following optimization problem [21]
+                                              
+                         min 1T x−x0T log(x) s.t. x<0                          (2)
+                           x
+
+where 1 ∈ Rd is a vector of ones, < denotes element-wise inequality, and log(·) is
+             2
+
+
+applied element wise. However, the optimization problem defined in (2) is known
+to be an ill-posed problem [10, 26]. In order to address this, we follow a sparse
+                                                 b by computing an s-sparse vector
+representation approach [18] and aim to estimate x
+α and a dictionary D such that xb =Dα.
+                                           
+                min 1T (Dα)−x0T log(Dα) s.t. ||α||0 ≤s, Dα<0                   (3)
+                D,α
+
+This optimization problem in (3) is further relaxed by setting Dα = exp(Dα) to
+handle the non-negativity constraint [22]. Furthermore, the `0 constraint on α makes
+(3) an NP-hard problem [7]. Hence, we use the `1 relaxation as in [11], resulting in
+the following problem:
+                                                   
+                       min 1T exp(Dα)−x0T (Dα) +λ||α||1                          (4)
+                       D,α
+4       C.K. Ta et al.
+
+
+
+
+Fig. 1: Method Overview. Poisson2Sparse Optimization Steps: We optimize the
+sparse representation in the forward pass and then we update the encoder and decoder
+through back-propagation in an alternating manner.
+
+
+                                                         b by solving for sparse prior
+     The above optimization problem in (4) now estimates x
+α and dictionary D. Inspired from the Iterative Shrinkage Thresholding Algorithm
+(ISTA) [6], we propose to solve for α and D in an alternating manner using a neural
+network based approach. In order to solve for α, traditional approaches [6] solve the
+following optimization problem
+                               min|α|0    s.t x=Dα
+However, trying to solve for that objective directly is difficult and a common approx-
+imation is the following objective using the `1 relaxation.
+                                                          
+                                     1
+                           argmin ||x−Dα||22 +λ|α|1                                (5)
+                                α    2
+The ISTA algorithm aims to solve (5) via the update step α←S(α+ L1 DT (x0 −Dα)),
+where L ≤ σmax(DT D) and S is the soft threshold operator with a threshold of 
+defined as S(x)=sign(x)max(|x|−,0). With this update step, the ISTA algorithm
+iteratively refines the computed sparse code until a specified convergence criterion.
+However, in our problem formulation we work with images with dimension d making
+                       2
+the dictionary D ∈Rd ×k dependent on the size of the input image. To address this,
+we use the Convolutional Sparse Coding model as in [24] and replace the matrix-vector
+product with a convolution (denoted by ∗):
+                                    M
+                                    X
+                              Dα=     Dj ∗Aj =D∗A                                 (6)
+                                      j
+
+where Dj ∈ Rk×k is filter convolved around a sparse feature map Aj ∈ Rd×d. This
+new form of the sparse code and application of the dictionary decouples the size of
+the dictionary from the input image size and removes the need to scale the model
+with respect to the image size and gives us the following update step:
+                                                            
+                      Ai ←S Ai−1 +DT ∗(X0 −D∗Ai−1)                              (7)
+         Poisson2Sparse: Self-Supervised Poisson Denoising From a Single Image        5
+
+   Using the ISTA approach, we can remove the need to optimize for α in (4) and
+rewrite the objective function, where is the Hadamard product, as
+                                                     
+                          min exp(D∗A)−X0 (D∗A)                              (8)
+                            D
+
+Poisson2Sparse Algorithm. To solve (8) using the ISTA algorithm, we represent
+D∗A using a neural network fθ . The network fθ which contains a single encoder
+and decoder which computes the sparse representation A with respect to the net-
+work parameters which allows for learnable dictionaries D through back-propagation.
+Mathematically, this can be represented as D∗A=fθ (X0). The modified optimiza-
+tion problem (8), where we aim to enforce sparsity through the network structure
+implicitly, can be rewritten as
+                                                         
+                          min exp(fθ (X0))−X0 fθ (X0)                          (9)
+                           θ
+
+which we will refer to as LP oisson moving forward. Inspired by recent works in internal
+learning [17], we aim to use network fθ that will implicitly enforce sparsity through
+the network’s structure. Hence, we propose to adapt the internal learning approach via
+the ISTA algorithm. Prior works [24] have demonstrated that by we can approximate
+computing the update step in the ISTA algorithm by replacing the D and term DT
+with a decoder and encoder respectively in (7).
+                                                                
+                       A←S A+Encoder(X0 −Decoder(A))                                (10)
+
+Following [24], we approximate ISTA to a finite T number of iterations and by
+approximating the traditional update with (10) which naturally lends itself to a
+recurrent neural network-like structure where instead of passing in a T length sequence
+we are refining the sparse code A over T steps instead. This results in the network’s
+forward pass that computes the sparse code as well as the application of the dictionary
+to the computed sparse code. The sparse code is then refined over a finite number
+of steps as opposed to being run until convergence in the traditional ISTA algorithm.
+
+Poisson2Sparse Training. In order to train the network, we follow [13] and generate
+our input and target image pairs by using the random neighbor down-sampling. The
+random neighbor down-sampling is done by dividing the input image into k × k
+blocks and for each block, two adjacent pixels are selected and are used to create
+down-sampling functions denoted by g1 and g2. This down-sampling approach avoids
+learning the trivial identity solution where the network learns to simply map the
+input to output to solve (9). It creates image pairs that are similar in appearance but
+are slightly different in terms of the ground truth pixels. These image pairs can be
+seen as different realizations of the same noise distribution and by trying to minimize
+the loss function for these noisy pairs we can estimate the true ground truth signal.
+Optimizing (9) alone with the generated image pairs will result in blurry images due
+to the slight difference in the underlying ground truth and thus we incorporate the
+regularizer proposed in [13] which is defined as the following with strength µN .
+
+              LN =kfθ (g1(X0))−g2(X0)−g1(fθ (X0))−g2(fθ (X0))k22                   (11)
+6          C.K. Ta et al.
+
+                   DIP       Self2Self    BM3D          Ours
+    Dataset λ
+                              PSNR (dB)/SSIM                      Table 1: Quantitative Results
+           40 30.222/0.878 33.138/0.942 32.553/0.944 34.309/0.957 show that we outperform both self-
+    PINCAT 20 26.495/0.765 30.067/0.893 31.448/0.911 32.202/0.937
+                                                                  supervised works (DIP, Self2Self)
+           10 22.495/0.601 27.028/0.814 27.961/0.867 30.005/0.898
+     FMD - 32.417/0.916 28.563/0.688 29.627/0.854 32.980/0.897 and traditional work BM3D (best
+    Average - 27.907/0.790 29.699/0.834 30.397/0.894 32.374/0.922 results in bold).
+
+
+
+
+We also add an L1 reconstruction loss which is referred as LL1 and it aids in the
+reduction of artifacts generated from (9). The overall loss function used to optimize
+the dictionary parameters fθ which is applied per pixel is given as:
+                                         L=LP oisson +LL1 +µNLN                                 (12)
+
+3      Experiments and Results
+Datasets and Experimental Setup. We used the test set of the following datasets
+to evaluate our approach. (a) Florescent Microscopy Denoising Dataset (FMD)
+[29]: This dataset contains 12000 Fluorescence Microscopy images of size 512×512
+containing noise where Poisson noise is dominant. The images contain real noise of
+varying strengths from across multiple microscopy modalities. In order to obtain clean
+images a common technique is to average multiple images for an effective ground
+truth. For this dataset this is especially appropriate as the samples are static which
+allows for accurate registration between the 50 images used to obtain the effective
+ground truth. (b) PINCAT Dataset [23]: This is a simulated cardiac perfusion
+MRI dataset with clean images of size 128×128. For this dataset, we added artificial
+noise (where the strength λ of noise indicates the maximum event count, with a lower
+λ indicating a higher noise). Specifically we can represent a noisy image as X0 = Zλ
+where Z ∼P(λX) and we tested with λ=[40,20,10] following prior works [27].
+
+Baselines and Evaluation Metrics. We use a traditional denoising approach,
+BM3D [5], and internal learning based approaches such as Deep Image Prior (DIP)
+[17] and Self2Self [20] as our baselines. While comparison to vanilla ISTA is also
+appropriate we found that the results were far worse than any of the methods pre-
+viously mentioned despite its fast runtime and will leave those experiments in the
+supplementary material. In order to compare methods we use Peak Signal to Noise
+Ratio (PSNR) and the Structural Similarity Index (SSIM) as evaluation metrics.
+
+Training details. To optimize the network, we use the Adam optimizer [14] with a
+learning rate of 0.0001 and set µN =2 as done in [13]. We use a single convolutional
+layer for both the encoder and decoder with a kernel size of 3×3, stride of 1, and
+each layer has 512 filters. For the number of steps in the network, we empirically find
+that 10 gave us the best performance and we train the network over 5500 iterations.
+We used PyTorch for our implementation and the model was trained using a Nvidia
+RTX 2080 Ti for a total of 7 minutes for an image of size 128×128.
+
+    Qualitative and Quantitative Results. From our experiments we are able to
+         Poisson2Sparse: Self-Supervised Poisson Denoising From a Single Image        7
+
+
+
+
+  16.920 dB     21.985 dB      26.827 dB      28.831 dB     30.433 dB        PSNR
+
+
+
+
+  17.580 dB     23.386 dB      27.700 dB      29.082 dB     31.494 dB        PSNR
+
+
+
+
+  17.050 dB     22.140 dB      26.448 dB      26.698 dB     28.882 dB        PSNR
+
+  (a) Noisy      (b) DIP      (c) Self2Self   (d) BM3D       (e) Ours        (f) GT
+
+Fig. 2: Denoising results on the PINCAT dataset. Noise is λ=10. We can see
+that our method is able to recover finer details such as the ribs in the image.
+
+
+
+
+  24.701 dB     32.430 dB      32.888 dB      27.752 dB     33.731 dB        PSNR
+
+
+
+
+  28.124 dB     30.524 dB      31.591 dB      30.417 dB     31.706 dB        PSNR
+
+
+
+
+  33.271 dB     34.037 dB      23.984 dB      34.158 dB     38.707 dB        PSNR
+
+  (a) Noisy      (b) DIP      (c) Self2Self   (d) BM3D       (e) Ours        (f) GT
+
+Fig. 3: Denoising results on the FMD dataset. Note that for some cases, Self2Self
+failed to denoise the input image and returned only a blank image.
+
+
+
+outperform existing state-of-the-art approaches for single image denoising by a signifi-
+8         C.K. Ta et al.
+
+
+    Loss Functions                Metrics
+                                                               Table 2: Ablation studies.
+    LL1   LP oisson   PSNR (dB) ∆PSNR SSIM ∆SSIM
+                                                               We tested the impact of each
+    X        X          32.202       –      0.9370       –
+                                                               term in our loss function on
+    X                   31.565   -2.01 %    0.9335   -0.37 %
+                                                               the overall performance, indi-
+             X          32.007   -0.61 %    0.9356   -0.14 %
+                                                               cated by a X.
+
+
+cant margin in terms of the PSNR and SSIM. In Table 1, we can see that for all noise
+levels in the PINCAT dataset we are significantly outperforming other self-supervised
+and classical methods in terms of the PSNR and the SSIM. In Figure. 2, we show that
+our approach can recover the finer details around the rib-cage which other methods
+fail to recover to any meaningful degree. Additionally, we can see that in regions
+where the ground truth is of a single consistent value we are able to recover the region
+with a result that is much smoother than other methods where significant noise is still
+present in the final output. With the FMD dataset where the noise is not pure Poisson
+noise, we find that on average we are doing better than existing methods in terms of
+the PSNR. In terms of the SSIM, we are slightly underperforming when compared to
+the DIP but visual inspection shows that DIP in certain cases DIP will actually over-
+smooth the resulting image as shown in Figure 3. We additionally found that Self2Self
+is unstable on many of the images resulting in blank images for a large portion of
+the dataset which explains the poor results shown in Table 1. Overall our method
+performs better than other self-supervised single image approaches for pure Poisson
+noise and is competitive in cases where the noise is not completely Poisson noise.
+
+
+    Ablation Studies. We performed ablation studies on our final loss function (12)
+in order to evaluate the performance of its components. We evaluate our approach
+using the same architecture for the full and ablated loss functions. Specifically, we
+test our full loss function, LP oisson, and LL1. For the experiments, we keep the
+regularizer LN for all experiments and tested our results on the PINCAT dataset
+with Poisson noise with strength λ=20. We use the same metrics used to evaluate
+the performance of our approach - PSNR, and SSIM. The results, as shown in Table
+2, indicate that our Poisson-based loss is the key contributor to the performance of
+our overall approach; when it is removed we suffer the largest performance drop as
+opposed to removing the L1 reconstruction loss. This validates our motivation of
+using a specialized loss function for handling Poisson noise. In addition to this, we
+find that the inclusion of the L1 reconstruction loss does improve our performance
+to a level greater than any of the individual terms on their own. Qualitative results
+of the ablation studies are shown in the supplementary material.
+
+
+4       Conclusion
+In this paper, we introduce Poisson2Sparse, a self-supervised approach for single-image
+denoising for Poisson corrupted images. We explore the application of sparsity, in con-
+junction with internal learning-based methods for image enhancement, and show signifi-
+         Poisson2Sparse: Self-Supervised Poisson Denoising From a Single Image          9
+
+cantly superior performance to existing approaches. By only requiring a single noisy im-
+age, our method is practical in situations where the acquisition of clean data can be dif-
+ficult. Our experiments validate our method as we are able to outperform existing state-
+of-the-art methods for self-supervised approaches under a variety of datasets and vary-
+ing levels of Poisson noise, for example, by more ∼2 dB PSNR in average performance.
+Acknowledgement. The work was partially supported by US National Science
+Foundation grants 1664172, 1762063, and 2029814.
+                                Bibliography
+
+
+ [1] Aich, A., Gupta, A., Panda, R., Hyder, R., Asif, M.S., Roy-Chowdhury, A.K.: Non-
+     adversarial video synthesis with learned priors. In: Proceedings of the IEEE/CVF
+     Conference on Computer Vision and Pattern Recognition (CVPR) (June 2020)
+ [2] Aldaz, S., Escudero, L.M., Freeman, M.: Live imaging of drosophila imaginal
+     disc development. Proceedings of the National Academy of Sciences 107(32),
+     14217–14222 (2010)
+ [3] Bristow, H., Eriksson, A., Lucey, S.: Fast convolutional sparse coding. In: 2013
+     IEEE Conference on Computer Vision and Pattern Recognition. pp. 391–398
+     (2013)
+ [4] Chen, L., Lu, X., Zhang, J., Chu, X., Chen, C.: Hinet: Half instance normalization
+     network for image restoration. In: Proceedings of the IEEE/CVF Conference
+     on Computer Vision and Pattern Recognition (CVPR) Workshops. pp. 182–192
+     (June 2021)
+ [5] Dabov, K., Foi, A., Katkovnik, V., Egiazarian, K.: Image denoising with block-
+     matching and 3D filtering. In: Image Processing: Algorithms and Systems, Neural
+     Networks, and Machine Learning. Society of Photo-Optical Instrumentation
+     Engineers (SPIE) Conference Series, vol. 6064, pp. 354–365 (Feb 2006)
+ [6] Daubechies, I., Defrise, M., De Mol, C.: An iterative thresholding algorithm
+     for linear inverse problems with a sparsity constraint. Communications on
+     Pure and Applied Mathematics: A Journal Issued by the Courant Institute of
+     Mathematical Sciences 57(11), 1413–1457 (2004)
+ [7] Ge, D., Jiang, X., Ye, Y.: A note on the complexity of l p minimization.
+     Mathematical programming 129(2), 285–299 (2011)
+ [8] Giryes, R., Elad, M.: Sparsity-based poisson denoising with dictionary learning.
+     IEEE Transactions on Image Processing 23(12) (2014)
+ [9] Gupta, A., Aich, A., Rodriguez, K., Reddy, G.V., Roy-Chowdhury, A.K.: Deep
+     quantized representation for enhanced reconstruction. In: 2020 IEEE 17th
+     International Symposium on Biomedical Imaging Workshops (ISBI Workshops).
+     pp. 1–4. IEEE (2020)
+[10] Hansen, P.C.: Rank-deficient and discrete ill-posed problems: numerical aspects
+     of linear inversion. SIAM (1998)
+[11] Harmany, Z.T., Marcia, R.F., Willett, R.M.: This is spiral-tap: Sparse poisson
+     intensity reconstruction algorithms—theory and practice. IEEE Transactions
+     on Image Processing 21(3), 1084–1096 (2012)
+[12] Hasinoff, S.W.: Photon, poisson noise. (2014)
+[13] Huang, T., Li, S., Jia, X., Lu, H., Liu, J.: Neighbor2neighbor: Self-supervised de-
+     noising from single noisy images. In: Proceedings of the IEEE/CVF Conference on
+     Computer Vision and Pattern Recognition (CVPR). pp. 14781–14790 (June 2021)
+[14] Kingma, D.P., Ba, J.: Adam: A method for stochastic optimization. CoRR
+     abs/1412.6980 (2015)
+         Poisson2Sparse: Self-Supervised Poisson Denoising From a Single Image         11
+
+[15] Krull, A., Buchholz, T.O., Jug, F.: Noise2void - learning denoising from single
+     noisy images. In: 2019 IEEE/CVF Conference on Computer Vision and Pattern
+     Recognition (CVPR). pp. 2124–2132 (2019)
+[16] Lehtinen, J., Munkberg, J., Hasselgren, J., Laine, S., Karras, T., Aittala, M., Aila,
+     T.: Noise2Noise: Learning image restoration without clean data. In: Dy, J., Krause,
+     A. (eds.) Proceedings of the 35th International Conference on Machine Learning.
+     Proceedings of Machine Learning Research, vol. 80, pp. 2965–2974. PMLR
+     (10–15 Jul 2018), https://proceedings.mlr.press/v80/lehtinen18a.html
+[17] Lempitsky, V., Vedaldi, A., Ulyanov, D.: Deep image prior. In: 2018 IEEE/CVF
+     Conference on Computer Vision and Pattern Recognition. pp. 9446–9454 (2018)
+[18] Mairal, J., Bach, F., Ponce, J., Sapiro, G., Zisserman, A.: Non-local sparse
+     models for image restoration. In: 2009 IEEE 12th International Conference on
+     Computer Vision. pp. 2272–2279 (2009)
+[19] Pawley, J.B.: Fundamental Limits in Confocal Microscopy, pp. 20–42. Springer
+     US, Boston, MA (2006)
+[20] Quan, Y., Chen, M., Pang, T., Ji, H.: Self2self with dropout: Learning
+     self-supervised denoising from single image. In: Proceedings of the IEEE/CVF
+     Conference on Computer Vision and Pattern Recognition. pp. 1890–1898 (2020)
+[21] Raginsky, M., Willett, R.M., Harmany, Z.T., Marcia, R.F.: Compressed
+     sensing performance bounds under poisson noise. IEEE Transactions on Signal
+     Processing 58(8), 3990–4002 (2010)
+[22] Salmon, J., Harmany, Z., Deledalle, C.A., Willett, R.: Poisson noise reduction
+     with non-local pca (2014)
+[23] Sharif, B., Bresler, Y.: Adaptive real-time cardiac mri using paradise: Validation
+     by the physiologically improved ncat phantom. In: 2007 4th IEEE International
+     Symposium on Biomedical Imaging: From Nano to Macro. pp. 1020–1023. IEEE
+     (2007)
+[24] Simon, D., Elad, M.: Rethinking the csc model for natural images. Advances
+     in Neural Information Processing Systems 32 (2019)
+[25] Sjulson, L., Miesenböck, G.: Optical recording of action potentials and other
+     discrete physiological events: A perspective from signal detection theory.
+     Physiology 22(1), 47–55 (2007)
+[26] Tikhonov, A.N., Goncharsky, A., Stepanov, V., Yagola, A.G.: Numerical
+     methods for the solution of ill-posed problems, vol. 328. Springer Science &
+     Business Media (1995)
+[27] Xu, J., Adalsteinsson, E.: Deformed2self: Self-supervised denoising for dynamic
+     medical imaging. In: International Conference on Medical Image Computing
+     and Computer-Assisted Intervention. pp. 25–35. Springer (2021)
+[28] Zamir, S.W., Arora, A., Khan, S., Hayat, M., Khan, F.S., Yang, M.H., Shao,
+     L.: Multi-stage progressive image restoration. In: Proceedings of the IEEE/CVF
+     Conference on Computer Vision and Pattern Recognition. pp. 14821–14831 (2021)
+[29] Zhang, Y., Zhu, Y., Nichols, E., Wang, Q., Zhang, S., Smith, C., Howard, S.:
+     A poisson-gaussian denoising dataset with real fluorescence microscopy images.
+     In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern
+     Recognition. pp. 11710–11718 (2019)
+                                           Supplementary Material for “Poisson2Sparse: Self-
+                                           Supervised Poisson Denoising From a Single Image”
+
+                                           Calvin-Khang Ta1,?, Abhishek Aich1,?, Akash Gupta2,?, Amit K. Roy-Chowdhury1
+                                                                     1
+                                                                  University of California, Riverside, 2 Vimaan AI
+                                                            {cta003@, aaich001@, agupt013@, amitrc@ece.}ucr.edu
+arXiv:2206.01856v2 [eess.IV] 27 Jun 2022
+
+
+
+
+                                               Algorithm 1: Proposed Poisson2Sparse Training
+                                              Input : X0 a noisy image, N Number of iterations
+                                              Input : θ encoder-decoder parameters
+                                                                      c
+                                              Output : denoised image X
+                                              /* Sparse Representation Optimization via Forward Pass                     */
+                                            1 A0 ←Encoder(X0 )
+                                            2 for i in N Steps do
+                                            3     Xi ←Decoder(Ai−1 )
+                                            4     Ai ←S(Ai−1 +Encoder(X0 −Xi ))
+                                              c ←Decoder(AN )
+                                            5 X
+                                                /* Dictionary Learning via Back-propagation                              */
+                                            6 Compute L and update θ
+
+
+
+
+                                               16.920 dB      21.985 dB    26.827 dB      28.831 dB   30.433 dB      PSNR
+
+
+
+
+                                               17.580 dB      23.386 dB    27.700 dB      29.082 dB   31.494 dB      PSNR
+
+                                               (a) Noisy        (b) DIP   (c) Self2Self   (d) BM3D     (e) Ours      (f) GT
+
+                                           Fig. 1: Denoising results on the PINCAT dataset. Noise is λ=20 on the first
+                                           row and λ=40 on the second row.
+
+
+                                           ?
+                                               joint first authors
+2       C.K Ta et al.
+
+
+
+
+      19.346 dB                      19.154 dB                      19.179 dB
+
+
+
+
+Fig. 2: Denoising results on the PINCAT dataset. The following images were
+denoised using ISTA. Noise is λ=10.
+
+
+
+
+       (a) Noisy                    (c) Self2Self                  (e) Ours
+
+
+
+
+       (b) DIP                      (d) BM3D                        (f) GT
+
+Fig. 3: Denoising results on the FMD dataset. We can see that our result
+produces the most visually similar image. The DIP will overly smooth the image and
+you can see that some textural information is loss. Our superior performance is much
+more apparent when we look at Self2Self and BM3D
+

@@ -1,0 +1,672 @@
+                                                        Poisson Inverse Problems by the Plug-and-Play scheme
+                                                                    Arie Rond, Raja Giryes and Michael Elad
+                                                     Department of Computer Science Technion—Israel Institute of Technology
+                                                                       Technion City, Haifa 32000, Israel
+                                            sarikr@cs.technion.ac.il | raja.giryes@duke.edu | elad@cs.technion.ac.il
+
+                                                                                               November 10, 2015
+
+
+
+                                                                                                       Abstract
+arXiv:1511.02500v1 [cs.CV] 8 Nov 2015
+
+
+
+
+                                                    The Anscombe transform [1] offers an approximate conversion of a Poisson random variable into a Gaussian
+                                               one. This transform is important and appealing, as it is easy to compute, and becomes handy in various inverse
+                                               problems with Poisson noise contamination. Solution to such problems can be done by first applying the Anscombe
+                                               transform, then applying a Gaussian-noise-oriented restoration algorithm of choice, and finally applying an inverse
+                                               Anscombe transform. The appeal in this approach is due to the abundance of high-performance restoration algo-
+                                               rithms designed for white additive Gaussian noise (we will refer to these hereafter as ”Gaussian-solvers”). This
+                                               process is known to work well for high SNR images, where the Anscombe transform provides a rather accurate ap-
+                                               proximation. When the noise level is high, the above path loses much of its effectiveness, and the common practice
+                                               is to replace it with a direct treatment of the Poisson distribution. Naturally, with this we lose the ability to leverage
+                                               on vastly available Gaussian-solvers.
+                                                    In this work we suggest a novel method for coupling Gaussian denoising algorithms to Poisson noisy inverse
+                                               problems, which is based on a general approach termed ”Plug-and-Play” [18]. Deploying the Plug-and-Play ap-
+                                               proach to such problems leads to an iterative scheme that repeats several key steps: (i) A convex programming task
+                                               of simple form that can be easily treated; (ii) A powerful Gaussian denoising algorithm of choice; and (iii) A simple
+                                               update step. Such a modular method, just like the Anscombe transform, enables other developers to plug their own
+                                               Gaussian denoising algorithms to our scheme in an easy way. While the proposed method bares some similarity to
+                                               the Anscombe operation, it is in fact based on a different mathematical basis, which holds true for all SNR ranges.
+
+
+                                        1     Introduction
+                                        In an inverse problem we are given a degraded image, y, and want to recover from it a clean image, x. The math-
+                                        ematical relation between the two images is given by y = N (Hx), where H is some linear operator and N is a
+                                        noise operator. A popular way to handle this reconstruction is to use a Bayesian probabilistic model that contains two
+                                        ingredients: (i) the measurement forward model, mathematically given by P (y|x) ; and (ii) a prior model for clean
+                                        images, given by P (x) .
+                                            In our work we concentrate on the case of Poisson Inverse Problems (PIP), Where N stands for Poisson contami-
+                                        nation. In a Poisson model for an image the gray levels of the image pixels are viewed as Poisson distributed random
+                                        variables. More specifically, given a clean image pixel x[i], the probability of getting a noisy value y[i] is given by
+
+                                                                                                 (x[i])y[i] −x[i]
+                                                                                               (
+                                                                            P (y [i] |x [i]) =     y[i]! e        if x [i] > 0
+                                                                                                                               .                               (1)
+                                                                                                δ (y [i])         if x [i] = 0
+                                            A known property of this distribution is that x [i] is both the mean and variance of y [i]. This model is relevant in
+                                        various tasks such as very low light imaging, CT reconstruction [13], fluorescence microscopy [2], astrophysics [16]
+                                        and spectral imaging [10]. Common to all these tasks is the weak measured signal intensity.
+                                            An important note
+                                                            p about Poisson noise is that the SNR of the measurements is proportional to the original image
+                                        intensity, given by x[i]. Therefore the peak value of an image is an important characteristic, needed when evaluating
+                                        the level of noise in the image. For high peak levels, there exist several very effective ways to solve Poisson inverse
+                                        problems. Many of these methods rely on the fact that it is possible to perform an approximate transform (known as
+                                        Variance Stabilized Transform - VST) of the Poisson distribution into a Gaussian one [1], [8]. Since there are highly
+                                           ∗
+                                             This research was supported by the European Research Council under EUs 7th Framework Program, ERC grant agreement 320649, by the
+                                        Intel Collaborative Research Institute for Computational Intelligence, and by the Google Faculty Research Award.
+
+
+                                                                                                           1
+effective algorithms for Gaussian noise restoration (e.g. [4], [7], [11], [19], [5]), such methods can be used, followed
+by an inversion of the VST operation after the Gaussian solver [12], [20].
+     When dealing with lower peaks, such transformations become less efficient, and alternative methods are required,
+which treat the Poisson noise directly (e.g. [9], [15]). In recent years this direct approach has drawn considerable
+attention, and it seems to be very successful. In this work we aim at studying yet another method for Poisson inverse
+problem restoration that belongs to the direct approach family. The appeal of the proposed method is the fact that it
+offers an elegant bridge between the two families of methods, as it is relying too on Gaussian noise removal, applied
+iteratively.
+     This paper is organized in the following way : In section 2 we introduce the plug and play approach, as presented
+in [18]. We also extend this scheme to be able to work with several priors in parallel. In section 3 we present our
+algorithm, as derived from the plug and play approach. This section explains how to integrate a custom Gaussian
+denoising algorithm of choice,and discusses several improvements that were added to the algorithm. In section 4 we
+present experiments results, and in section 5 we conclude our paper by suggesting further improvements.
+
+
+2    The Plug-and-Play (PaP) Approach
+2.1 Standard Plug-and-Play
+The Plug-and-Play framework, proposed by Venkatakrishnan, Bouman and Wohlberg [18], allows simple integration
+between inversion problems and priors, by applying a Gaussian denoising algorithm, which corresponds to the used
+prior. One of the prime benefits in the PaP scheme is the fact that the prior to be used does not have to be explicitly
+formulated as a penalty expression. Instead, the idea is to split the prior from the inverse problem, a task that is done
+elegantly by the ADMM optimization method [3], and then the prior is deployed indirectly by activating a Gaussian
+denoising algorithm of choice.
+    The goal of the PaP framework is to maximize the posterior probability in an attempt to implement the MAP
+estimator. Mathematically, this translate to the following:
+
+                                                      P (y|x) P (x)
+                          max P (x|y) = max                         = max P (y|x) P (x) .                            (2)
+                         x∈Rm×n              x∈Rm×n       P (y)      x∈Rm×n
+
+The above suggests to maximize the posterior probability P (x|y) with respect to the ideal image x, which is of size
+n × m pixels. Taking element wise −ln (·) of this expression gives an equivalent problem of the form
+
+                             min −ln (P (x|y)) =        min −ln (P (y|x)) − ln (P (x)) .                             (3)
+                            x∈Rm×n                    x∈Rm×n
+
+In order to be consistent with [18] we denote l (x) = −ln (P (y|x)) and s (x) = −ln (P (x)). Thus our task is to find
+x that solves the problem
+                                             x̂ = arg min l (x) + βs (x) .                                        (4)
+                                                  x∈Rm×n
+
+Note that y is constant in this minimization. Also, a parameter β was added to achieve more flexibility. By adding a
+variable splitting technique to the optimization problem we get
+
+                                             x̂ = arg min l (x) + βs (v) .
+                                                  x,v∈Rm×n                                                           (5)
+                                                 s.t x = v
+
+This problem can be solved using ADMM [3] by constructing an augmented Lagrangian which is given by
+
+                                                          λ                λ
+                                  Lλ = l (x) + βs (v) +     kx − v + uk22 − kuk22 .                                  (6)
+                                                          2                2
+ADMM theory [3] states that minimizing (5) is equivalent to iterating until convergance over the following three steps:
+
+                                       xk+1 = arg min Lλ x, v k , uk ,
+                                                                         
+                                                    x
+                                       v k+1 = arg min Lλ xk+1 , v, uk ,
+                                                                           
+                                                                                                                    (7)
+                                                    v
+                                         k+1      k      k+1       k+1
+                                                                       
+                                       u      =u + x          −v         .
+
+
+
+                                                             2
+    By plugging Lλ we get
+                                                                                      2
+                                   xk+1 = arg min l (y|x) + λ2 x − v k − uk        2
+                                                                                           ,
+                                                x
+                                                                          2
+                                   v k+1 = arg min λ2 xk+1 + uk − v       2
+                                                                            + βs (v) ,                                 (8)
+                                              v
+                                   uk+1 = uk + xk+1 − v k+1 .
+                                                             
+
+The second step means applying a Gaussian denoising algorithm which assumes a prior s (v) on the image xk+1 + uk
+with variance of σ 2 = βλ . Therefore, as already mentioned above, we do not have to know the formulation of the prior
+explicitly, as we can simply use a Gaussian denoising algorithm which corresponds to it.
+    The first step is dependent on the inversion problem we are trying to solve. In the next section we show how
+Poisson inverse problems are connected to this step. We will see that in this case step 1 is convex and becomes
+easy to compute. When handling the Poisson Denoising problem, this steps becomes even simpler because it is also
+separable, thus leading to a scalar formula that resembles the Anscombe transform.
+
+2.2 Plug-and-Play Extension
+We now show a simple extension of the Plug-and-Play method that enables to use several Gaussian denoisers. We
+start from the following ADMM formulation, that follows Equation (5)
+
+                                         arg min l(x) + β1 s1 (v1 ) + β2 s2 (v2 ),
+                                                                                                                       (9)
+                                         s.t x = v1 , x = v2
+where s1 and s2 are two priors that we aim to use, and v1 and v2 are two auxiliary variables that will help in simplifying
+the solution of this problem. Following the steps taken above in the derivation of the PaP, we get
+
+Step 1:
+                                                                          2                         2
+                           xk+1 = arg min l (x) + λ x − v1 k + u1 k           + λ x − v2 k + u2 k       .            (10)
+                                        x                                 2                         2
+
+      As in the original Plug-and-Play, this expression too is convex if l(x) is convex, and also separable if l(x) is
+      separable.
+
+Step 2:
+                                                                                               2
+                                     v1 k = arg min β1 s1 (v1 ) + λ xk+1 − v1 + u1 k 2
+                                                v                                                                    (11)
+                                                                                               2
+                                     v2 k = arg min β2 s2 (v2 ) + λ xk+1 − v2 + u2 k 2
+                                                v
+
+      which are two Gaussian denoising steps, each using a different prior.
+
+Step 3:
+                                                 u1 k+1 = uk1 + xk+1 − v1 k+1
+                                                                                                                     (12)
+                                                 u2 k+1 = uk2 + xk+1 − v2 k+1
+
+Obviously, this scheme can be generalized to use as many priors as needed. The core idea behind this generalization
+is that often times we may encounter different priors that address different features of the unknown image, such as
+self-similarity, local smoothness or other structure, scale-invariance, and more. By merging two such priors into the
+PaP scheme, we may get an overall benefit, as they complement each other.
+
+
+3    P4 IP Algorithm
+We now turn to introduce the ”Plug-and-Play Prior for Poisson Inverse Problem” algorithm, P4 IP in short, and how
+it uses the plug and play framework. We start by invoking the proper log-likelihood function l(x) into the above-
+described formulation, this way enabling the integration of Gaussian denoising algorithms to the Poisson inverse
+problems. Then we discuss two applications of our algorithm – the denoising and the deblurring scenarios.
+
+
+
+
+                                                            3
+3.1 The Proposed Algorithm
+We denote an original (clean) image, with dimensions m × n, by an m × n column-stacked vector x. Similarly, we
+denote a noisy image by y. The i’s pixel in x (and respectively y) is given by x[i] (respectively y[i]). We also denote
+by H the linear degradation operator that is applied on the image, which could be a blur operator, down-scaling or
+even a tomographic projection. In order to proceed we should find an expression for l(x). As mentioned before, this
+is given by taking −ln (·) of P (y|x). When taking H into account we get
+                                                            Y (Hx) yi
+                                                                        i
+                                             P (y|x) =                        e−(Hx)i .                                    (13)
+                                                                 Γ (yi + 1)
+                                                             i
+
+Thus, l(x) is given by
+
+                                                      (Hx)i yi −(Hx)i
+                                       X                               
+               l(x) = ln(P (y|x)) =         ln                  e           = −y T ln(Hx) + 1T Hx + constant.              (14)
+                                                     Γ (yi + 1)
+                                        i
+
+Relying on equation (8), the first ADMM step in matrix form is therefore
+
+                                                                                      λ
+                           arg min Lλ = arg min −y T ln (Hx) + 1T Hx +                  kx − v + uk22 .                    (15)
+                               x                 x                                    2
+This expression is convex and can be solved quite efficiently by modern optimization methods. The final algorithm is
+shown in Algorithm 1.
+
+Algorithm 1 - P4 IP
+  Input: Distorted image y, Gaussian denoise(·) function
+  Initialization: set k = 0,u0 = 0, v 0 =some initialization;
+  while !stopping criteria do
+                                                              2
+      xk+1 = arg min −y T ln (Hx) + 1T Hx + λ2 x − v k + uk 2
+                   x
+        v k+1 = Gaussian denoise (xk+1 + uk ) with σ 2 = βλ
+        uk+1 = uk + xk+1 − v k+1
+     k =k+1
+  end while
+  Output: Reconstructed image xk
+
+    Obviously we could use the Plug-and-Play extension that employs several denoising methods, as shown in the
+previous section. Such a change requires only slight modifications to Algorithm 1.
+
+3.1.1    Poisson Denoising
+For the special case of Poisson denoising H = I. In this case the first ADMM step is separable, which means that it
+could be solved for each pixel individually. Moreover, this step can be solved by the closed form solution
+                                                          q
+                                       k [i] − uk [i] − 1 +
+                                                                                        2
+                        k+1
+                                  λ  v                         (λ (v k [i] − uk [i]) − 1) + 4λy[i]
+                      x [i] =                                                                      ,          (16)
+                                                                2λ
+where xk [i] is the i’th pixel of xk (and v k [i], uk [i] and y[i] are the i’th pixels of v k , uk and y respectively). The full
+derivation of this step is shown in the appendix A. A closer look at thisexpression
+                                                                                  q        reveals some resemblance to the
+                                                                              3
+Anscombe transform. Indeed, for the initial condition u0 = 0, v 0 = 4         8 + 1 , and λ = 0.25, the variance of x
+is the same as the one achieved by Anscombe’s transform, because they differ only by a constant. We mention here
+that we did not find that the initialization of the parameters lead to noticeable change in the final reconstruction, as
+long as it is the same order of magnitude of the noisy image, and therefore, all the shown results use
+                                                                                                     qall zero 
+                                                                                                                image as
+                                                                                                          3
+initialization. Figure 1 shows the transform done by Equation (16) for λ = 0.25, v k [i] − uk [i] = 4     8 + 1 + i for
+i = {0, 3, 6, 9}, and the Anscombe transform. While this curve may look like the Anscombe one, PaP is substantially
+different in two ways - (i) this curve changes (locally) from one iteration to another due to the change in u and v, and
+(ii) we do not apply the inverse transform after the Gaussian denoising.
+
+                                                                  4
+                        60
+
+
+
+                        50
+
+
+
+                        40
+
+
+
+                        30
+
+
+
+                        20
+                                                             P4IP denoising transform,λ*(v−u)=1.6124
+                                                             P4IP denoising transform,λ*(v−u)=4.6124
+                        10                                   P4IP denoising transform,λ*(v−u)=7.6124
+                                                             P4IP denoising transform,λ*(v−u)=11.6124
+                                                             Anscombe transform
+                         0
+                             0       50         100           150           200        250             300
+                                                      Noisy pixel intensity
+
+
+             Figure 1: P4 IP and Anscombe transformations as a function of input noisy pixel. λ = 0.25.
+
+
+3.1.2   Poisson Deblurring
+When dealing with the deblurring problem, H represents a blur matrix. The first ADMM step is no longer separable
+and usually no analytical solution is available. However the problem is convex and a common way to solve it is by
+using iterative optimization methods, which usually require the gradient. Turning back to our problem, the gradient
+of Lλ (x) is given by
+                                 ∇x Lλ = −H T (y/ (Hx)) + H T 1 + λ (x − v + u) .                              (17)
+Where ”/” stands for element-wise division. As can be seen, this gradient is easy to compute, as it requires blurring
+the temporary solution x, the constant vector 1 and the vector y/ (Hx) in each such computation.
+
+3.2 Details and Improvements
+We chose to focus on two different inverse problems - the denoising and deblurring problem scenarios. In both, we
+chose BM3D as our Gaussian denoiser, as it provides very good results and has an efficient implementation. Both
+scenarios required appropriate choice of parameters and their values. An important parameter is β - the prior weight.
+Empirical results show that inappropriate choice of β leads to poor results, sometimes by several dB. Another two
+parameters that has big effect on the reconstruction relate to the choice of λ. This parameter is considered to be
+proportional to the inverse of the step size. We found that increasing λ at each iteration gives better results then a
+constant λ. Thus, λ update requires two parameters. The first is λ0 - the initial value of λ, and the second, λstep - the
+value λ is multiplied by at each iteration. Another important parameter is the number of iterations. We chose to use
+a fixed number of iterations, but of course this parameter can also be learned or even estimated, similarly to what is
+done in [14]. For a given noise peak, each parameter was tuned on a series of 8 images. Out of each original image
+we generated 5 degraded images, noisy for the denoising scenario, and blurred and noisy for the deblurring scenario.
+We tested multiple peak values in the range of 0.2 - 4. We found that the optimal λ0 and β have strong correlation to
+the peak value. On the other hand, λstep has a weak dependence on the peak, and was thus chosen independently of
+it.
+     Another improvement used, called binning, gives significant improvement in very low SNR cases. Here the image
+is down sampled and the algorithm is applied on the smaller sized image that has a better SNR, since we add up the
+photon counts of the merged pixels. Once the final result of the algorithm is obtained, we apply up-scaling by a simple
+linear interpolation. This technique leads to better results, and also reduces runtime as we are operating on smaller
+images. All the experiments reported below with binning use a 3:1 shown-scaling in each axis. Binning can only be
+used in the denoising scenario as down sampling doesn’t commute with the blur operator.
+     In the denoising scenario we also tested the multiple prior P4 IP Algorithm. We call this variation M-P4 IP. As our
+second denoiser we chose to use a simplified version of [17], which is a multi-scale denoising algorithm. Multi-scale
+considerations are not used in BM3D, and therefore the two algorithms joint together may form a more powerful
+denoising prior.
+
+                                                             5
+   In the deblurring scenario,L-BFGS was chosen as our optimization method. In order to avoid calculating ln(·)
+where Hx is negative, we optimized the surrogate function
+                                               
+                                                     Lλ (x) , x < ε
+                                      f (x) =        2                                                     (18)
+                                                  ax + bx + c , x ≥ ε
+
+where the coefficients a, b and c were chosen such that this function and it’s derivative coincides with Lλ and it’s
+derivative at x = ǫ. as x → 0 we get that Hx → 0 and Lλ (x) → inf, therefore choosing a small enough ǫ value,
+guarantees that the surrogate function will have the same minimum as Lλ and all entries in Hx are positive.
+    Another technique that improves the results in both denoising and debluring states that we can apply several
+algorithm runs with slightly different parameters and average the final results. Of course, this comes at cost of run
+time. All results shown here are without this trick.
+
+
+4   Experiments
+4.1 Denoising
+We tested our algorithm for peak values 0.1, 0.2, 0.5, 1, 2 and 4. To evaluate our algorithm we compared to BM3D
+with the refined inverse Anscombe transform [12]. We also compared to [9], which leads to the best of our knowledge,
+to state of the art results. All algorithms were tested with and without binning. The results are shown in Table 1.
+    Figures 2-5 show several such results. As can be seen, the propose approach competes favorably with the
+BM3D+Anscombe and state-of-the-art algorithms. Binning is found to be beneficial for all algorithms when deal-
+ing with low peak values. As for run-times, our algorithm takes on roughly 30 sec/image when binning is used. This
+should be compared to the BM3D+Anscombe that runs somewhat faster (0.5 sec/image), and the SPDA method [9]
+which is much slower (an average of 15-20 minutes/image). When removing the binning, our algorithm runs for
+few minutes, BM3D+Anscombe runs for several seconds and SPDA runs for approximately 10 hours. These runtime
+evaluations were measured on an i7 with 8GB RAM laptop.
+    As mentioned before, to check the effectivity M-P&P we chose to combine BM3D with a simplified version of
+[17]. We noticed that it is important to find the right prior weight parameter. We only tested on a peak=0.2 scenario
+and the results are shown in table 3. For the tested peak, the algorithm gained 0.2 dB improvement. We note that it
+was harder to find good parameters and therefore we believe that it is possible to improve even more.
+
+Table 1 denoising without binning PSNR values
+    Method     Peak   Saturn    Flag    Camera     House       Swoosh   Peppers   Bridge   Ridges      Average
+    BM3D        0.1   19.42     13.05   15.66      16.28       16.93    15.61     15.68    20.06       16.59
+    SPDA              17.40     13.35   14.36      14.84       15.12    14.28     14.60    19.86       15.48
+    P4 IP             21.55     13.30   16.88      18.30       20.93    16.28     16.45    19.08       17.85
+    BM3D        0.2   22.02     14.28   17.35      18.37       19.95    17.10     17.09    21.27       18.43
+    SPDA              21.52     16.58   16.93      17.83       18.91    16.75     16.80    23.25       18.57
+    P4 IP             23.05     14.82   17.82      19.48       23.34    17.31     17.54    21.28       19.33
+    BM3D        0.5   23.86     15.87   18.83      20.27       22.92    18.49     18.24    23.37       20.23
+    SPDA              25.50     19.67   18.90      20.51       24.21    18.66     18.46    27.76       21.71
+    P4 IP             25.19     16.50   19.27      20.93       25.58    18.86     18.47    23.57       21.05
+    BM3D         1    25.89     18.31   20.37      22.35       26.07    19.89     19.22    26.26       21.73
+    SPDA              27.02     22.54   20.23      22.73       26.28    19.99     19.20    30.93       23.61
+    P4 IP             27.05     19.07   20.54      22.67       27.79    20.07     19.31    26.56       22.88
+    BM3D         2    27.42     20.81   22.13      24.18       28.09    21.97     20.31    29.82       23.56
+    SPDA              29.38     24.92   21.54      25.09       29.27    21.23     20.15    33.40       25.62
+    P4 IP             28.93     21.04   21.87      24.65       29.65    21.33     20.16    29.97       24.70
+    BM3D         4    29.40     23.04   23.94      26.04       30.72    24.07     21.50    32.39       26.39
+    SPDA              31.04     26.27   21.90      26.09       33.20    22.09     20.55    36.05       27.15
+    P4 IP             30.82     22.49   23.29      26.33       31.80    23.88     21.11    31.98       26.46
+
+
+
+
+                                                           6
+Table 2 denoising with binning for peak 0.2 PSNR values
+   Method       Peak    Saturn   Flag      Camera   House    Swoosh    Peppers    Bridge       Ridges   Average
+   BM3Dbin       0.2    23.20    16.28     18.25    19.71    24.25     17.44      17.70        23.92    20.09
+   SPDAbin              23.99    18.26     17.95    19.62    23.53     17.59      17.82        27.22    20.75
+   P4 IP bin            23.79    17.26     18.58    19.96    24.53     17.44      17.54        23.94    20.38
+
+
+Table 3 multiple priors PSNR values
+  Method        Peak    Saturn   Flag      Camera   House    Swoosh     Peppers       Bridge   Ridges   Average
+  P4 IP bin      0.2    23.79    17.26     18.58    19.96    24.53      17.44         17.54    23.94    20.38
+  M-P4 IP bin           24.10    16.77     18.58    20.02    24.58      17.63         17.69    25.38    20.59
+
+
+
+
+                                      original                        noisy, peak=1
+
+
+
+
+                         Anscome+BM3D, PSNR=18.51                  P4 IP, PSNR=19.33
+
+                       Figure 2: The image Flag with peak 1 - Denoising (no binning) results.
+
+
+
+
+                                                         7
+         original                         noisy, peak=2
+
+
+
+
+Anscome+BM3D, PSNR=18.51               P4 IP, PSNR=19.33
+
+      Figure 3: Peak 2 - Denoising (no binning) results
+
+
+
+
+                             8
+         original                     (a) noisy, peak=0.2
+
+
+
+
+Anscome+BM3D, PSNR=19.90           (b) M-P4 IP, PSNR=20.43
+
+        Figure 4: Peak 0.2 denoising (with binning)
+
+
+
+
+                            9
+                                               original                      (a) noisy, peak=0.2
+
+
+
+
+                                  Anscome+BM3D, PSNR=20.75                 (b) M-P4 IP, PSNR=21.66
+
+                                               Figure 5: Peak 0.2 denoising (with binning)
+
+
+4.2 Deblurring
+In this scenario, we tested our algorithm for the peak values 1, 2 and 4 of an image that was blurred by one of the
+following blur kernels:
+
+  (i) a Gaussian kernel of size 25 by 25 with σ = 1.6.
+             1
+ (ii)                   for x1 , x2 = −7, . . . , 7
+        (1+x21 +x22 )
+(iii) 9 × 9 uniform
+
+To evaluate our algorithm we compared to IDD-BM3D [5] with the refined inverse Anscombe transform [12]. The
+results are shown in Tables 4, 5 and 6. Figures 6, 7 and 8 show specific results to better assess the visual quality of the
+outcome.
+
+Table 4 deblurring PSNR values for blur kernel (i)
+        Method      Peak       Saturn     Flag        Camera   House    Swoosh   Peppers     Bridge   Ridges   Average
+        BM3D         1         24.32      16.18       19.39    21.06    26.51    18.47       18.34    22.06    20.79
+        P4 IP                  25.69      17.97       19.84    21.93    26.51    19.48       19.03    25.56    22.00
+        BM3D            2      26.07      17.78       20.61    22.66    28.61    19.84       19.28    25.71    22.57
+        P4 IP                  25.95      19.49       20.78    23.33    28.67    20.47       19.67    28.38    23.34
+        BM3D            4      28.05      20.25       21.66    24.69    30.30    21.25       20.20    29.05    24.43
+        P4 IP                  28.81      20.44       21.37    24.51    30.62    21.11       20.13    31.42    24.80
+
+
+
+
+                                                                   10
+Table 5 deblurring PSNR values for blur kernel (ii)
+    Method     Peak      Saturn   Flag     Camera    House       Swoosh   Peppers    Bridge   Ridges     Average
+    BM3D        1        24.36    15.53    18.99     20.81       25.83    18.24      18.20    21.21      20.40
+    P4 IP                25.14    17.07    19.50     21.52       25.89    19.05      18.69    24.28      21.39
+    BM3D         2       26.02    16.58    20.01     22.15       28.33    19.29      18.98    24.38      21.97
+    P4 IP                26.39    18.61    20.18     22.49       28.29    19.80      19.25    26.63      22.70
+    BM3D         4       27.64    19.00    20.84     23.68       29.45    20.55      19.71    27.52      23.55
+    P4 IP                28.48    19.80    20.76     23.58       29.70    20.56      19.70    29.20      23.97
+
+
+Table 6 deblurring PSNR values for blur kernel (iii)
+    Method     Peak      Saturn   Flag     Camera    House       Swoosh   Peppers    Bridge   Ridges     Average
+    BM3D        1        24.11    15.46    18.93     20.71       26.23    18.12      18.17    21.48      20.40
+    P4 IP                24.36    17.12    19.49     21.37       26.03    19.04      18.64    23.53      21.20
+    BM3D         2       26.06    16.54    19.93     22.20       28.26    19.29      18.83    24.69      21.97
+    P4 IP                25.62    18.61    20.11     22.54       28.17    19.81      19.19    25.83      22.48
+    BM3D         4       27.41    18.83    20.63     23.47       29.81    20.36      19.63    27.56      23.46
+    P4 IP                27.97    19.77    20.66     23.39       29.93    20.47      19.71    29.15      23.88
+
+     It is clearly shown that in this scenario P4 IP outperforms the Anscombe-transform framework. The runtime for
+a single image took about 5 minutes on an i7, 8G RAM laptop, about twice slower then Anscombe, and took 44
+iterations.
+
+
+
+
+                                       original                           noisy, peak=2
+
+
+
+
+                         Anscombe with IDD-BM3D,                             P4 IP,
+                         PSNR=20.65                                       PSNR=20.83
+
+                     Figure 6: The image Peppers with peak 2 and blur kernel (i) - deblurring results.
+
+
+
+                                                            11
+                  original                     noisy and blurry, peak=1
+
+
+
+
+    Anscombe with IDD-BM3D,                            P4 IP,
+    PSNR=24.04                                      PSNR=26.56
+
+Figure 7: The image Ridges with peak 2 and blur kernel (ii) - deblurring results.
+
+
+
+
+                                       12
+                                     original                     noisy and blurry, peak=1
+
+
+
+
+                       Anscombe with IDD-BM3D,                            P4 IP,
+                       PSNR=18.97                                      PSNR=19.40
+
+               Figure 8: The image Camera Man with peak 2 and blur kernel (iii) - deblurring results.
+
+
+5    Conclusion and discussion
+This work proposes a new way to integrate Gaussian denoising algorithms to Poisson noise inverse problems, by using
+the Plug-and-Play framework, this way taking advantage of the existing Gaussian solvers. The integretion is done by
+simply using the Gaussian denoiser as a ”black box” as part of the overall algorithm. This work demonstrates this
+paradigm on two problems - image denoising and image deblurring. Numerical results show that our algorithm out-
+performs the Anscombe-transform framework in lower peaks, and competes favorably with it on other cases. These
+results could be further improved by using the proposed extension of Plug-and-Play, which enables to combine mul-
+tiple Gaussian denoising algorithms. Further work should be done in order to better tune the algorithm’s parameters,
+similar to [6]. Its is also interesting to learn more closely the relation between the Anscombe transform and our
+method. We have found that under certain initialization conditions, in the first step P4 IP does variance stabilization
+that is as good as Anscomb’s one. It is possible that more could be said about the matter.
+
+
+Appendix A Derivation of first denoising ADMM step
+In the denoising case H = I and we get that l(x) is given by
+
+                                   l (X) = −y T ln (x) + 1T ln (Γ (y + 1)) + 1T x.                                (19)
+
+The augmented Lagrangian is thus
+
+                                                                   λ              λ
+                        Lλ = −y T ln (x) + 1T x − β ln (P (v)) +     kx − v + uk − kuk22 ,                        (20)
+                                                                   2              2
+
+
+
+                                                          13
+and the first ADMM step becomes
+                                                                           λ              2
+                xk+1 = arg min Lλ x, v k , uk = arg min −y T ln (x) + 1T x +   x − v k + uk .                     (21)
+                          x                        x                         2              2
+
+The first step (x update) is a convex and separable, implying that each entry of x can be treated separately. Further-
+more, computing the elements of x is easily handled leading to a closed form expression. By differentiating Lλ by
+x [i] and equating to 0 we get
+                                        y[i]                               
+                                      −      + 1 + λ x[i] − v k [i] + uk [i] = 0.                                 (22)
+                                        x[i]
+Thus, we get that                                               q
+                                                                                           2
+                                    v k [i] − uk [i]
+                                                             
+                                λ                          − 1 + (λ (v k [i] − uk [i]) − 1) + 4λy[i]
+                       x[i] =                                                               .                     (23)
+                                                            2λ
+As y is non negative, the expression inside the square root is also non negative and causes the resulted x to be non
+negative also. Another possible solution could have been the second root of Equation (22), but this solution is purely
+negative and thus uninformative.
+
+
+References
+ [1] F. J. Anscombe. The transformation of poisson, binomial and negative-binomial data. Biometrika, pages 246–
+     254, 1948.
+
+ [2] J. Boulanger, C. Kervrann, P. Bouthemy, P. Elbau, J.-B. Sibarita, and J. Salamero. Patch-based nonlocal
+     functional for denoising fluorescence microscopy image sequences. Medical Imaging, IEEE Transactions on,
+     29(2):442–454, 2010.
+
+ [3] S. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein. Distributed optimization and statistical learning via the
+     alternating direction method of multipliers. Foundations and Trends R in Machine Learning, 3(1):1–122, 2011.
+
+ [4] K. Dabov, A. Foi, V. Katkovnik, and K. Egiazarian. Image denoising by sparse 3-d transform-domain collabo-
+     rative filtering. Image Processing, IEEE Transactions on, 16(8):2080–2095, 2007.
+
+ [5] A. Danielyan, V. Katkovnik, and K. Egiazarian. Bm3d frames and variational image deblurring. Image Process-
+     ing, IEEE Transactions on, 21(4):1715–1728, 2012.
+
+ [6] C.-A. Deledalle, F. Tupin, and L. Denis. Poisson nl means: Unsupervised non local means for poisson noise. In
+     Image processing (ICIP), 2010 17th IEEE international conference on, pages 801–804. IEEE, 2010.
+
+ [7] M. Elad and M. Aharon. Image denoising via sparse and redundant representations over learned dictionaries.
+     Image Processing, IEEE Transactions on, 15(12):3736–3745, 2006.
+
+ [8] M. Fisz. The limiting distribution of a function of two independent random variables and its statistical appli-
+     cation. In Colloquium Mathematicae, volume 3, pages 138–146. Institute of Mathematics Polish Academy of
+     Sciences, 1955.
+
+ [9] R. Giryes and M. Elad. Sparsity-based poisson denoising with dictionary learning. Image Processing, IEEE
+     Transactions on, 23(12):5057–5069, 2014.
+
+[10] M. R. Keenan and P. G. Kotula. Accounting for poisson noise in the multivariate analysis of tof-sims spectrum
+     images. Surface and Interface Analysis, 36(3):203–212, 2004.
+
+[11] J. Mairal, F. Bach, J. Ponce, G. Sapiro, and A. Zisserman. Non-local sparse models for image restoration. In
+     Computer Vision, 2009 IEEE 12th International Conference on, pages 2272–2279. IEEE, 2009.
+
+[12] M. Makitalo and A. Foi. Optimal inversion of the anscombe transformation in low-count poisson image denois-
+     ing. Image Processing, IEEE Transactions on, 20(1):99–109, 2011.
+
+[13] I. Rodrigues, J. Sanches, and J. Bioucas-Dias. Denoising of medical images corrupted by poisson noise. In
+     Image Processing, 2008. ICIP 2008. 15th IEEE International Conference on, pages 1756–1759. IEEE, 2008.
+
+
+                                                                  14
+[14] Y. Romano and M. Elad. Improving k-svd denoising by post-processing its method-noise. In ICIP, pages
+     435–439, 2013.
+
+[15] J. Salmon, Z. Harmany, C.-A. Deledalle, and R. Willett. Poisson noise reduction with non-local pca. Journal of
+     mathematical imaging and vision, 48(2):279–294, 2014.
+
+[16] J. Schmitt, J. Starck, J. Casandjian, J. Fadili, and I. Grenier. Poisson denoising on the sphere: application to the
+     fermi gamma ray space telescope. Astronomy & Astrophysics, 517:A26, 2010.
+
+[17] J. Sulam, B. Ophir, and M. Elad. Image denoising through multi-scale learnt dictionaries. In Image Processing
+     (ICIP), 2014 IEEE International Conference on, pages 808–812. IEEE, 2014.
+
+[18] S. V. Venkatakrishnan, C. A. Bouman, and B. Wohlberg. Plug-and-play priors for model based reconstruction.
+     2013.
+
+[19] G. Yu, G. Sapiro, and S. Mallat. Solving inverse problems with piecewise linear estimators: from gaussian
+     mixture models to structured sparsity. Image Processing, IEEE Transactions on, 21(5):2481–2499, 2012.
+
+[20] B. Zhang, J. M. Fadili, and J.-L. Starck. Wavelets, ridgelets, and curvelets for poisson noise removal. Image
+     Processing, IEEE Transactions on, 17(7):1093–1108, 2008.
+
+
+
+
+                                                           15
+

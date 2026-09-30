@@ -1,0 +1,17 @@
+1. Load the noisy image as a 256×256 array y of photon counts (mostly 0s, 1s, 2s).
+2. Initialize the guess x = y + 0.01 (or a slightly blurred y plus 0.01) so every pixel is above zero and log x is defined.
+3. Choose the settings once: λ (e.g. 0.1), step size τ (small, e.g. 0.01), smoothing ε = 0.001 (avoids dividing by zero), and max iterations (e.g. 500).
+4. Compute horizontal differences dh = x[:, 1:] − x[:, :-1], giving a 256×255 array (right neighbor minus me).
+5. Compute vertical differences dv = x[1:, :] − x[:-1, :], giving a 255×256 array (lower neighbor minus me).
+6. Pad dh with a zero column on the right and dv with a zero row at the bottom so both are 256×256 and border pixels have no outside neighbor.
+7. Compute the gradient magnitude at every pixel: m = sqrt(dh² + dv² + ε²).
+8. Normalize to get direction only: ph = dh / m and pv = dv / m (each value is now between −1 and 1, no matter how big the jump was).
+9. Compute the divergence: div[r,c] = (ph[r,c] − ph[r,c−1]) + (pv[r,c] − pv[r−1,c]), treating anything outside the image as 0.
+10. Compute the data pull at every pixel: g_data = 1 − y / x (positive means x is too high, negative means x is too low).
+11. Combine both pulls into the total gradient: g = g_data − λ · div.
+12. Take one step downhill: x_new = x − τ · g.
+13. Clip so x stays positive: x_new = max(x_new, 0.01).
+14. Measure the change mean(|x_new − x|); if it is below a tolerance (e.g. 1e-4) or you hit max iterations, stop, otherwise set x = x_new and go back to step 4.
+15. The final x is the denoised 256×256 image for this noisy image.
+16. Repeat steps 1 to 15 independently for every image in your dataset, since each image gets its own x.
+17. Tune λ by running a few values (e.g. 0.02, 0.05, 0.1, 0.3) on a handful of images and keeping the one with the best PSNR/SSIM against ground truth, or the best look if you have none.
