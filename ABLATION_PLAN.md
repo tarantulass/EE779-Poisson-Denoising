@@ -5,8 +5,9 @@ Every experiment changes **one factor** relative to a named **parent**, is tuned
 **same protocol and budget** as its parent, and is scored on the **same noisy images**.
 Experiment IDs (B0.2, A1.c, ...) are used as `label`s in configs and result tables.
 
-The baselines (stage B0) and the harness are implemented. The direction A/B denoisers
-and solvers plug into the harness as described in §5.
+Status: B0, A1, A2, A3 and B1 are implemented (§9 lists files, configs and what is
+not implemented yet). Decisions made while implementing, with the reason for each, are
+marked **Implementation note**.
 
 ---
 
@@ -83,6 +84,11 @@ and ρ₀ exactly as B0.2, plus the threshold constant `c`.
 **A1-default:** `db4`, J = 4 levels, periodization (exactly orthonormal), soft
 threshold, threshold on detail subbands only, `η = c·σ`, no cycle spinning.
 
+**Implementation note (tuning grid).** With `η = c·σ` and `σ = √(β/ρ)` the denoiser sees
+β and c only through `c·√β` (checked in `tests/test_directions.py`). Tuning β, c and ρ₀
+together would waste the budget on a flat direction, so A1 fixes β = 1 and tunes
+(c, ρ₀) on the same 3×3 log grid as B0.2. A1.a has no c and tunes (β, ρ₀).
+
 | ID | Single change vs A1-default | What it tests |
 |---|---|---|
 | A1.a | `η = σ² = β/ρ` (no separate `c`; β is the only weight) instead of `c·σ` | Only `η = β/ρ` makes the denoiser the exact prox of `β‖W v‖₁` (for orthonormal W). Then P4IP is ADMM on an explicit convex objective: log `f(x)+β‖Wx‖₁` per iteration and check it settles (ADMM is not monotone; run A1.a once with constant ρ to confirm convergence, then with the paper schedule). `η ∝ σ` is the usual heuristic denoiser. This is the cleanest "explicit prior vs plug-in" ablation. |
@@ -90,7 +96,7 @@ threshold, threshold on detail subbands only, `η = c·σ`, no cycle spinning.
 | A1.c | wavelet ∈ {haar, sym8} (same J) | Sensitivity to filter length/smoothness |
 | A1.d | J ∈ {2, 3, 5} | Sensitivity to the coarsest scale |
 | A1.e | hard instead of soft threshold | Bias of soft thresholding at low counts |
-| A1.f | per-subband constants `c_j` (one per level, J values tuned) | Slide 10 "tune thresholds by subband". Budget: give B0.2 and A1-default the same number of tuning configs (budget-matched control). |
+| A1.f | per-subband constants `c_j` (one per level, J values tuned) | Slide 10 "tune thresholds by subband". Budget: give B0.2 and A1-default the same number of tuning configs (budget-matched control). *Denoiser supports it (`c` as a list); no tune config yet, because a 4-D grid needs a coordinate search the tuner does not have.* |
 | A1.g | cycle spinning over K ∈ {4, 16} shifts (average of shifted D) | Removes shift variance; no longer an exact prox. Report runtime ×K. |
 
 **Main comparison:** best A1 vs B0.2 on a PSNR–runtime plot at every peak (expect
@@ -115,20 +121,30 @@ K = 256 atoms, LL (coarse) coefficients excluded from `B` and passed through unc
 `B` learned on the 48 detail coefficients from 100 000 random training patches (fixed
 seed), sparse coding by error-constrained OMP with `‖c − Bα‖² ≤ n·(γσ)²`, n = number of
 coded coefficients, γ tuned (start 1.15). Learner: the same algorithm, iterations and
-atom-norm constraint `‖b_l‖ ≤ 1` for every variant (e.g. scikit-learn
-`MiniBatchDictionaryLearning`, fixed `random_state`).
+unit-norm atoms for every variant.
+
+**Implementation notes.** (1) *DC.* Every variant removes the patch mean and passes it
+through uncoded. Then A2.1 (wavelet, free B over all 64) is an exact orthonormal rotation
+of A2.0 (pixel). The OMP coder is rotation-invariant, so a rotated dictionary gives the
+same output (`test_a2_1_free_wavelet_dict_equals_rotated_pixel_dict`); any A2.1 − A2.0 gap
+is learning noise. (2) *Learner.* scikit-learn's `MiniBatchDictionaryLearning` was too
+slow on 100 000 patches here, so all variants use OMP with fixed sparsity 8 plus MOD
+updates (Engan et al. 1999), 20 iterations, seed 0, unused atoms re-seeded from training
+vectors. The fit error per iteration is stored in each `.npz` (`meta.rel_err`).
+(3) *Tuning grid.* The OMP tolerance sees β and γ only through `γ·√β`, so A2 fixes β = 1
+and tunes (γ, ρ₀). Fixed-sparsity variants (A2.7) ignore σ and tune ρ₀ only (5 values).
 
 | ID | Single change vs A2-default | What it tests |
 |---|---|---|
 | A2.0 | **pixel-domain** dictionary, same K, same patches, same learner, DC handled the same way | The essential control (slide 16): is the wavelet domain doing anything? |
 | A2.1 | wavelet domain, **free** `B` over all 64 coefficients (LL included) | Null check: with an orthonormal `W_p` this is a reparametrisation of A2.0, so it should match A2.0 up to learning noise. A gap here is an optimisation artefact, not a modelling gain. |
-| A2.2 | separate dictionaries per orientation (LH, HL, HH), K/3 atoms each | Structured wavelet model |
+| A2.2 | separate dictionaries per orientation (LH, HL, HH), K/3 atoms each | Structured wavelet model *(not implemented yet)* |
 | A2.3 | K ∈ {64, 128, 512} | Capacity |
 | A2.4 | P = 6 (with a matching W_p) | Patch size |
 | A2.5 | stride ∈ {1, 4} | Runtime vs quality (stride 1 is ~4× slower) |
 | A2.6 | aggregation weights `w_j = 1/(1+‖α_j‖₀)` | Slide 16 `w_j` |
 | A2.7 | fixed sparsity T ∈ {2, 4, 8} instead of error-constrained OMP | Stopping rule |
-| A2.8 | dictionary trained on Anscombe-domain noisy patches vs clean patches | Whether training should match the intermediate ADMM image |
+| A2.8 | dictionary trained on Anscombe-domain noisy patches vs clean patches | Whether training should match the intermediate ADMM image *(not implemented yet)* |
 
 **Claim structure.** A "wavelet enhancement" holds only if A2-default (or A2.2) beats
 **A2.0** under the claim rule. Beating B0.2 is a separate question. Report average
@@ -161,15 +177,27 @@ Problem: `z = A(y)` (Anscombe), `min_α ½‖Dα − z‖² + λ‖α‖₁`, th
 `D` is **fixed** during sparse coding.
 
 **B1-default:** D = undecimated (stationary) wavelet tight frame (db4, J = 3, Parseval so
-L = 1), α⁰ = 0, stopping when the relative change in F falls below 1e-6 or after 1000
-iterations, λ tuned per peak on the tuning split.
+L = 1), α⁰ = 0 on the details, stopping when the relative change in F falls below 1e-6 or
+after 1000 iterations, λ tuned per peak on the tuning split.
+
+**Implementation note (coarse band).** Found while testing. (a) If the coarse
+(approximation) coefficients are free and unpenalised, the synthesis problem on a
+*redundant* frame is ill-posed. The detail ℓ1 cost can keep falling by moving content into
+ever larger coarse coefficients, so F* need not be attained, and FISTA was still far from
+converged after 3000 iterations. (b) Penalising all coefficients as written on slide 17
+shrinks the local mean: in the Anscombe domain the coarse coefficients are about the size
+of λ, giving about 9 dB on a tuning image. (c) **Used:** the coarse coefficients are fixed
+at (W z)₀ and only the details are optimised. This is well posed, unbiased in the local
+mean, and for an orthonormal basis gives exactly the one-step solution S(Wz, λ), so B1.0
+holds and B1 (dwt) uses the same prior as A1.a. (b) is kept as `approx: "penalized"` for
+reference; (a) is `approx: "free"` and must not be used for results.
 
 | ID | Change | What it tests |
 |---|---|---|
 | B1.0 | D = orthonormal wavelet (A1-default basis) | **Correctness test:** ISTA and FISTA must converge to the one-step solution `S(Dᵀz, λ)` (slide 17). Unit test, not a result. |
 | B1.a | **ISTA vs FISTA**: same F, λ, L, α⁰ and stopping rule | Slide 11. Report F(αᵏ) − F* vs k and vs wall time (F* from 5000 FISTA iterations), iterations to reach F − F* ≤ 1e-3·F* and 1e-4·F*, and final PSNR. Expect the FISTA rate advantage in iterations, not necessarily in PSNR. |
 | B1.b | PSNR vs iteration (early stopping) | Whether the converged minimiser is the best estimate |
-| B1.c | D = A2's learned dictionary, patch-wise (each patch coded independently, overlaps averaged) | Learned vs analytic frame inside the same objective. L = ‖B‖² from power iteration. |
+| B1.c | D = A2's learned dictionary, patch-wise (each patch coded independently, overlaps averaged) | Learned vs analytic frame inside the same objective. L = ‖B‖² from power iteration. *(not implemented yet)* |
 | B1.d | inverse: algebraic instead of exact | Interaction with the Anscombe bias at low peaks |
 | B1.e | L by backtracking instead of ‖D‖² | Slide 17 note |
 
@@ -179,7 +207,7 @@ and the same threshold rule (`η = β/ρ`), β and λ each tuned on the tuning s
 "approximate Gaussian likelihood after Anscombe" vs "exact Poisson likelihood via P4IP" as
 a function of peak. Expect the gap to grow as the peak falls.
 
-**Optional B2 (slide 18), exact Poisson + wavelet ℓ1.** `min_{x ≥ ε} Σ(x − y log x) +
+**Optional B2 (slide 18)** *(not implemented yet)*, exact Poisson + wavelet ℓ1.** `min_{x ≥ ε} Σ(x − y log x) +
 β‖Wx‖₁` solved two ways: (i) A1.a (P4IP/ADMM, η = β/ρ) and (ii) proximal gradient
 with backtracking on the domain x ≥ ε and an inner solver for the prox of
 `β‖W·‖₁ + I{x≥ε}` (e.g. Dykstra or a few ADMM steps). Both solve the same convex
@@ -224,3 +252,30 @@ Run the cheap A1/B1 sweeps first while BM3D jobs queue.
 5. Visual crops: cameraman and house at p = 0.2 and p = 1 for B0.1, B0.2, best A1, best A2, A3.
 6. A parameter table: tuned β, ρ₀ (and c, γ, λ) per peak per method.
 7. A limitations paragraph: 8 test images, synthetic Poisson noise, tuning budget, ε in B2.
+
+---
+
+## 9. Implementation map and run order
+
+| ID | Code | Tune config | Test config |
+|---|---|---|---|
+| B0.2a–c, e, f | `pdn/p4ip.py` | reuse `results/tune/p4ip_bm3d.json` | `b0_ablations.json` |
+| B0.2d | | `tune_B0_2d.json` | add the variants to a run config with `methods_from_tune` |
+| A1, A1.a–e, g | `pdn/wavelet.py` (`wavelet_soft`) | `tune_A1.json` (12 variants) | `directions_A1.json` |
+| A2, A2.0, A2.1, A2.3–A2.7 | `pdn/dictionary.py` (`wavelet_dict`), `experiments/learn_dictionary.py` | `tune_A2.json` | `directions_A2.json` |
+| A3, A3.c1, A3.c2, A3.c3 | consensus in `pdn/p4ip.py` | `tune_A3.json`, `tune_A3c1.json`, `tune_A3c2.json`, `tune_A3c3.json` | `directions_A3.json` |
+| A3.b | | `tune_A3b.json` | `directions_A3b.json` |
+| B1, B1.d, B1 (dwt) | `pdn/sparse.py` (`anscombe_l1`) | `tune_B1.json` | `directions_B1.json` (adds B1.a ISTA and B1.e backtracking with B1's λ) |
+| B1.a, B1.b curves; A1.a objective | `experiments/convergence.py` | — | `python -m experiments.convergence b1` / `a1` |
+
+Not implemented yet: A1.f tuning (the denoiser supports it), A2.2, A2.8, B1.c, B2.
+
+Order (later steps read earlier tuned JSONs):
+
+1. `tune_p4ip_bm3d.json` → `baselines.json`; `tune_A1.json` → `directions_A1.json`; `tune_B1.json` → `directions_B1.json`
+2. `python -m experiments.learn_dictionary` → `tune_A2.json` → `directions_A2.json`
+3. needs 1: `tune_A3*.json` → `directions_A3.json`; `b0_ablations.json`; bin3 tunes → `tune_A3b.json`
+4. `python -m experiments.analyze results/directions_A1 results/baselines --ref p4ip_bm3d`
+   (and `--ref A1` for the A1 sub-ablations, `--ref A2.0_pixel` for the A2 claim,
+   `--ref A3.c1_bm3d_bm3d` for the A3 claim, `--ref B1` for B1.a/d/e). For the cross-direction
+   likelihood ablation, use `--ref B1_dwt` and read the A1.a row.

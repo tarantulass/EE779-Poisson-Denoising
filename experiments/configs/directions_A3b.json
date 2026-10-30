@@ -1,0 +1,15 @@
+{
+  "name": "directions_A3b",
+  "split": "test",
+  "peaks": [
+    0.2
+  ],
+  "reps": [
+    0,
+    1,
+    2
+  ],
+  "methods_from_tune": [
+    "experiments/configs/tune_A3b.json"
+  ]
+}

@@ -44,14 +44,45 @@ def set_dotted(d: dict, key: str, value):
         cur[last] = value
 
 
+def _tuned_sources(tuned):
+    """'tuned' is a path, or a list of paths / {"file": path, "map": {old_key: new_key}}.
+    A map re-targets keys, e.g. the A1 winner 'priors.0.params.c' -> 'priors.1.params.c'
+    when the wavelet is the second prior of the A3 consensus."""
+    if not tuned:
+        return []
+    items = tuned if isinstance(tuned, list) else [tuned]
+    out = []
+    for it in items:
+        f, mp = (it, None) if isinstance(it, str) else (it["file"], it.get("map"))
+        with open(os.path.join(data.REPO, f)) as fh:
+            best = json.load(fh)["best"]
+        if mp is not None:  # map value: one key or a list of keys (copy to several)
+            best = {pk: {nk: v for k, v in kv.items() if k in mp
+                         for nk in (mp[k] if isinstance(mp[k], list) else [mp[k]])}
+                    for pk, kv in best.items()}
+        out.append(best)
+    return out
+
+
+def get_dotted(d, key: str):
+    cur = d
+    for p in key.split("."):
+        cur = cur[int(p)] if isinstance(cur, list) else cur[p]
+    return cur
+
+
+def grid_value(base: dict, key: str, v):
+    """Grid entries may be absolute, or '*f' = f times the value in the (tuned) base."""
+    if isinstance(v, str) and v.startswith("*"):
+        return get_dotted(base, key) * float(v[1:])
+    return v
+
+
 def resolve_params(spec: dict, peak: float) -> dict:
-    """spec = {'method':..., 'params': {...}, 'per_peak': {'0.2': {'rho0': 1, ...}},
-    'tuned': 'results/tune/xyz.json'}. Later sources override earlier ones."""
+    """spec = {'method':..., 'params': {...}, 'tuned': ... (see _tuned_sources),
+    'per_peak': {'0.2': {'rho0': 1, ...}}}. Later sources override earlier ones."""
     p = copy.deepcopy(spec.get("params", {}))
-    sources = []
-    if spec.get("tuned"):
-        with open(os.path.join(data.REPO, spec["tuned"])) as f:
-            sources.append(json.load(f)["best"])
+    sources = _tuned_sources(spec.get("tuned"))
     if spec.get("per_peak"):
         sources.append(spec["per_peak"])
     for src in sources:
@@ -59,6 +90,29 @@ def resolve_params(spec: dict, peak: float) -> dict:
         for k, v in src.get(key, {}).items():
             set_dotted(p, k, copy.deepcopy(v))
     return p
+
+
+def tune_variants(tcfg: dict) -> dict:
+    """Variants of a tune config: {label: {"overrides": {...}, "grid": {...} | None}}.
+    Without "variants" the config is a single variant labelled by its name."""
+    vs = tcfg.get("variants") or {tcfg["name"]: {}}
+    out = {}
+    for label, v in vs.items():
+        out[label] = {"overrides": dict(v), "grid": tcfg.get("variant_grids", {}).get(label)}
+    return out
+
+
+def variant_spec(tcfg: dict, label: str, with_own_tuned=True) -> dict:
+    """Test-time spec for one tuned variant: base params + overrides, base 'tuned'
+    sources, then the variant's own results/tune/<label>.json."""
+    p = copy.deepcopy(tcfg.get("params", {}))
+    for k, v in tune_variants(tcfg)[label]["overrides"].items():
+        set_dotted(p, k, copy.deepcopy(v))
+    tuned = tcfg.get("tuned") or []
+    tuned = list(tuned) if isinstance(tuned, list) else [tuned]
+    if with_own_tuned:
+        tuned.append(f"results/tune/{label}.json")
+    return {"method": tcfg["method"], "params": p, "tuned": tuned}
 
 
 def _peak_key(table: dict, peak: float):

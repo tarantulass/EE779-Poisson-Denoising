@@ -120,11 +120,23 @@ def run(y: np.ndarray, cfg: P4IPConfig, peak_hint: float | None = None, log: boo
         if log:
             primal = max(float(np.linalg.norm(x - v[j])) for j in range(J)) / np.sqrt(N)
             change = max(float(np.linalg.norm(v[j] - v_prev[j])) for j in range(J)) / np.sqrt(N)
-            trace.append({
+            nll = poisson_nll(np.maximum(x, 0), y)
+            entry = {
                 "iter": k + 1, "rho": rho, "sigma": sig[0] if J == 1 else sig,
-                "primal_res": primal / scale, "v_change": change / scale,
-                "nll": poisson_nll(np.maximum(x, 0), y),
-            })
+                "primal_res": primal / scale, "v_change": change / scale, "nll": nll,
+            }
+            for j in range(J):  # e.g. sparsity of a wavelet prior
+                st = getattr(D[j], "last_stats", None)
+                if st:
+                    entry.update({(f"p{j}_{kk}" if J > 1 else kk): vv for kk, vv in st.items()})
+            # explicit objective f(x) + sum_j beta_j g_j(x), only when every prior is
+            # the exact prox of a known g_j (e.g. A1.a); otherwise not logged
+            pens = [getattr(D[j], "penalty", None) for j in range(J)]
+            if all(pens):
+                vals = [pens[j](x, **cfg.priors[j].params) for j in range(J)]
+                if all(vv is not None for vv in vals):
+                    entry["objective"] = nll + sum(p.beta * vv for p, vv in zip(cfg.priors, vals))
+            trace.append(entry)
         if callback is not None:
             extra = callback(k + 1, x, v)
             if extra and log:

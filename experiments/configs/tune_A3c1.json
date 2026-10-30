@@ -1,0 +1,52 @@
+{
+  "name": "A3c1",
+  "method": "p4ip",
+  "params": {
+    "priors": [
+      {
+        "denoiser": "bm3d",
+        "beta": 1.0
+      },
+      {
+        "denoiser": "bm3d",
+        "beta": 1.0,
+        "rho_weight": 0.5
+      }
+    ],
+    "rho0": 1.0,
+    "rho_step": 1.065,
+    "n_iter": 70,
+    "init": "zero",
+    "output": "x"
+  },
+  "tuned": [
+    "results/tune/p4ip_bm3d.json"
+  ],
+  "peaks": [
+    0.1,
+    0.2,
+    0.5,
+    1,
+    2,
+    4
+  ],
+  "reps": [
+    100
+  ],
+  "grid": {
+    "priors.1.rho_weight": [
+      0.25,
+      0.5,
+      1.0
+    ],
+    "priors.1.beta": [
+      0.25,
+      1.0,
+      4.0
+    ]
+  },
+  "variants": {
+    "A3.c1_bm3d_bm3d": {}
+  },
+  "_comment": "Control: a second BM3D copy instead of the wavelet, same grid. A3 - A3.c1 tests 'wavelets complement BM3D'."
+}

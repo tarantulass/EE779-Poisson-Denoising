@@ -1,0 +1,51 @@
+{
+  "name": "B0_2d",
+  "method": "p4ip",
+  "params": {
+    "priors": [
+      {
+        "denoiser": "bm3d",
+        "beta": 1.0
+      }
+    ],
+    "rho0": 1.0,
+    "rho_step": 1.065,
+    "n_iter": 70,
+    "init": "zero",
+    "output": "x"
+  },
+  "peaks": [
+    0.1,
+    0.2,
+    0.5,
+    1,
+    2,
+    4
+  ],
+  "reps": [
+    100
+  ],
+  "grid": {
+    "priors.0.beta": [
+      0.25,
+      1.0,
+      4.0
+    ],
+    "rho0": [
+      0.5,
+      2.0,
+      8.0
+    ]
+  },
+  "variants": {
+    "B0.2d_step1.0": {
+      "rho_step": 1.0
+    },
+    "B0.2d_step1.03": {
+      "rho_step": 1.03
+    },
+    "B0.2d_step1.1": {
+      "rho_step": 1.1
+    }
+  }
+}

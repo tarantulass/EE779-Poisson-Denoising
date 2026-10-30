@@ -1,0 +1,116 @@
+{
+  "name": "A2",
+  "method": "p4ip",
+  "params": {
+    "priors": [
+      {
+        "denoiser": "wavelet_dict",
+        "beta": 1.0,
+        "params": {
+          "dict": "models/a2_default.npz",
+          "stride": 2,
+          "gamma": 1.15,
+          "sparsity": null,
+          "weights": "uniform"
+        }
+      }
+    ],
+    "rho0": 1.0,
+    "rho_step": 1.065,
+    "n_iter": 70,
+    "init": "zero",
+    "output": "x"
+  },
+  "peaks": [
+    0.1,
+    0.2,
+    0.5,
+    1,
+    2,
+    4
+  ],
+  "reps": [
+    100
+  ],
+  "grid": {
+    "priors.0.params.gamma": [
+      0.5,
+      1.0,
+      2.0
+    ],
+    "rho0": [
+      0.5,
+      2.0,
+      8.0
+    ]
+  },
+  "_comment": "beta fixed at 1: the OMP tolerance n*(gamma*sigma)^2 depends on beta and gamma only via gamma*sqrt(beta). Fixed-sparsity variants ignore sigma, so only rho0 is tuned (5 values). Dictionaries: python -m experiments.learn_dictionary",
+  "variants": {
+    "A2": {},
+    "A2.0_pixel": {
+      "priors.0.params.dict": "models/a2_pixel.npz"
+    },
+    "A2.1_free": {
+      "priors.0.params.dict": "models/a2_free.npz"
+    },
+    "A2.3_K64": {
+      "priors.0.params.dict": "models/a2_k64.npz"
+    },
+    "A2.3_K128": {
+      "priors.0.params.dict": "models/a2_k128.npz"
+    },
+    "A2.3_K512": {
+      "priors.0.params.dict": "models/a2_k512.npz"
+    },
+    "A2.4_P6": {
+      "priors.0.params.dict": "models/a2_p6.npz"
+    },
+    "A2.5_stride1": {
+      "priors.0.params.stride": 1
+    },
+    "A2.5_stride4": {
+      "priors.0.params.stride": 4
+    },
+    "A2.6_wsparsity": {
+      "priors.0.params.weights": "sparsity"
+    },
+    "A2.7_T2": {
+      "priors.0.params.sparsity": 2
+    },
+    "A2.7_T4": {
+      "priors.0.params.sparsity": 4
+    },
+    "A2.7_T8": {
+      "priors.0.params.sparsity": 8
+    }
+  },
+  "variant_grids": {
+    "A2.7_T2": {
+      "rho0": [
+        0.125,
+        0.5,
+        2.0,
+        8.0,
+        32.0
+      ]
+    },
+    "A2.7_T4": {
+      "rho0": [
+        0.125,
+        0.5,
+        2.0,
+        8.0,
+        32.0
+      ]
+    },
+    "A2.7_T8": {
+      "rho0": [
+        0.125,
+        0.5,
+        2.0,
+        8.0,
+        32.0
+      ]
+    }
+  }
+}

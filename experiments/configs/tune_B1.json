@@ -1,0 +1,49 @@
+{
+  "name": "B1",
+  "method": "anscombe_l1",
+  "params": {
+    "lam": 1.0,
+    "frame": "swt",
+    "wavelet": "db4",
+    "levels": 3,
+    "solver": "fista",
+    "max_iter": 1000,
+    "tol": 1e-06,
+    "backtracking": false,
+    "L0": 1.0,
+    "inverse": "exact",
+    "approx": "fixed"
+  },
+  "peaks": [
+    0.1,
+    0.2,
+    0.5,
+    1,
+    2,
+    4
+  ],
+  "reps": [
+    100
+  ],
+  "grid": {
+    "lam": [
+      0.25,
+      0.5,
+      1.0,
+      2.0,
+      4.0,
+      8.0
+    ]
+  },
+  "_comment": "One parameter (lam), 6 values factor 2. B1.a (ISTA) and B1.e (backtracking) are solver changes and reuse B1's lam (see directions_B1.json).",
+  "variants": {
+    "B1": {},
+    "B1.d_algebraic": {
+      "inverse": "algebraic"
+    },
+    "B1_dwt": {
+      "frame": "dwt",
+      "levels": 4
+    }
+  }
+}

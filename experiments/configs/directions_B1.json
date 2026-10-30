@@ -1,0 +1,57 @@
+{
+  "name": "directions_B1",
+  "split": "test",
+  "peaks": [
+    0.1,
+    0.2,
+    0.5,
+    1,
+    2,
+    4
+  ],
+  "reps": [
+    0,
+    1,
+    2
+  ],
+  "save_traces": false,
+  "methods_from_tune": [
+    "experiments/configs/tune_B1.json"
+  ],
+  "methods": {
+    "B1.a_ista": {
+      "method": "anscombe_l1",
+      "params": {
+        "lam": 1.0,
+        "frame": "swt",
+        "wavelet": "db4",
+        "levels": 3,
+        "solver": "ista",
+        "max_iter": 1000,
+        "tol": 1e-06,
+        "backtracking": false,
+        "L0": 1.0,
+        "inverse": "exact",
+        "approx": "fixed"
+      },
+      "tuned": "results/tune/B1.json"
+    },
+    "B1.e_backtracking": {
+      "method": "anscombe_l1",
+      "params": {
+        "lam": 1.0,
+        "frame": "swt",
+        "wavelet": "db4",
+        "levels": 3,
+        "solver": "fista",
+        "max_iter": 1000,
+        "tol": 1e-06,
+        "backtracking": true,
+        "L0": 0.1,
+        "inverse": "exact",
+        "approx": "fixed"
+      },
+      "tuned": "results/tune/B1.json"
+    }
+  }
+}

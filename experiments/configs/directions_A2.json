@@ -1,0 +1,21 @@
+{
+  "name": "directions_A2",
+  "split": "test",
+  "peaks": [
+    0.1,
+    0.2,
+    0.5,
+    1,
+    2,
+    4
+  ],
+  "reps": [
+    0,
+    1,
+    2
+  ],
+  "save_traces": true,
+  "methods_from_tune": [
+    "experiments/configs/tune_A2.json"
+  ]
+}

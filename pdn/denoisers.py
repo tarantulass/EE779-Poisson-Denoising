@@ -68,3 +68,7 @@ def gaussian_filter(r: np.ndarray, sigma: float, width: float = 1.5) -> np.ndarr
     from scipy.ndimage import gaussian_filter as gf
 
     return gf(r, sigma=width, mode="reflect")
+
+
+# Direction A priors register themselves on import (kept in their own modules).
+from . import dictionary, wavelet  # noqa: E402,F401

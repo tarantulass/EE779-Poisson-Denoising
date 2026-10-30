@@ -70,3 +70,6 @@ def p4ip_method(y, peak, priors, rho0, rho_step=1.0, n_iter=50, init="zero",
         n_iter=int(n_iter), init=init, rescale_dual=bool(rescale_dual), output=output,
         tol=float(tol))
     return p4ip.run(y, cfg, peak_hint=peak)
+
+# Direction B methods register themselves on import.
+from . import sparse  # noqa: E402,F401

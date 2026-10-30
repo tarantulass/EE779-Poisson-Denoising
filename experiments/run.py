@@ -3,6 +3,9 @@
     python -m experiments.run experiments/configs/baselines.json [--workers 8]
         [--peaks 0.1 1] [--reps 0] [--images cameraman house] [--only p4ip_bm3d]
 
+"methods_from_tune": [tune configs] adds every variant of those tune configs with
+its tuned parameters (results/tune/<label>.json), so test and tuning stay in sync.
+
 Results: results/<config name>/results.csv (+ traces/, + estimates/ if
 "save_estimates": true). Re-running the same command resumes.
 """
@@ -40,8 +43,16 @@ def main(argv=None):
     if cfg.get("split", "test") == "test" and cfg.get("tuning_on_test"):
         raise SystemExit("refusing: tuning on the test split")
 
+    methods = dict(cfg.get("methods", {}))
+    for tf in cfg.get("methods_from_tune", []):   # every tuned variant of a tune config
+        with open(os.path.join(data.REPO, tf)) as f:
+            tcfg = json.load(f)
+        experiment.load_plugins(tcfg.get("plugins"))
+        for label in experiment.tune_variants(tcfg):
+            methods[label] = experiment.variant_spec(tcfg, label)
+
     jobs = []
-    for label, spec in cfg["methods"].items():
+    for label, spec in methods.items():
         if a.only and label not in a.only:
             continue
         for peak in peaks:
