@@ -100,9 +100,13 @@ def _job(args):
 
 def done_keys(csv_path):
     keys = set()
-    if os.path.exists(csv_path):
+    if os.path.exists(csv_path) and os.path.getsize(csv_path) > 0:
         with open(csv_path) as f:
-            for r in csv.DictReader(f):
+            rd = csv.DictReader(f)
+            if rd.fieldnames != FIELDS:
+                raise ValueError(f"{csv_path}: header {rd.fieldnames} != expected {FIELDS}; "
+                                 "repair or remove the file")
+            for r in rd:
                 keys.add((r["label"], r["image"], float(r["peak"]), int(r["rep"]), r["params_hash"]))
     return keys
 
@@ -120,7 +124,8 @@ def run_jobs(jobs, csv_path, workers=None, trace_dir=None, save_dir=None, plugin
         print(f"{len(jobs) - len(todo)} done, {len(todo)} to run -> {csv_path}", flush=True)
     if not todo:
         return
-    new = not os.path.exists(csv_path)
+    # an empty file (e.g. a run killed before its first row) still needs the header
+    new = not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0
     workers = workers or os.cpu_count()
     if workers > 1:  # one thread per worker process; set before workers start
         for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
