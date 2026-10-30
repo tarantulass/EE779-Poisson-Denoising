@@ -1,0 +1,10 @@
+{
+  "name": "smoke",
+  "split": "test",
+  "peaks": [0.2, 1],
+  "reps": [0],
+  "methods": {
+    "anscombe_bm3d": {"method": "anscombe", "params": {"denoiser": "bm3d", "inverse": "exact"}},
+    "p4ip_gauss": {"method": "p4ip", "params": {"priors": [{"denoiser": "gaussian_filter", "beta": 1.0}], "rho0": 1.0, "rho_step": 1.065, "n_iter": 20, "output": "x"}}
+  }
+}

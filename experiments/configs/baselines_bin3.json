@@ -1,0 +1,15 @@
+{
+  "name": "baselines_bin3",
+  "split": "test",
+  "peaks": [0.1, 0.2, 0.5, 1, 2, 4],
+  "reps": [0, 1, 2],
+  "methods": {
+    "anscombe_bm3d_bin3": {"method": "anscombe", "params": {"denoiser": "bm3d", "inverse": "exact", "bin": 3}},
+    "p4ip_bm3d_bin3": {
+      "method": "p4ip",
+      "params": {"priors": [{"denoiser": "bm3d", "beta": 1.0}], "rho0": 1.0,
+                 "rho_step": 1.1, "n_iter": 50, "init": "zero", "output": "x", "bin": 3},
+      "tuned": "results/tune/p4ip_bm3d_bin3.json"
+    }
+  }
+}
