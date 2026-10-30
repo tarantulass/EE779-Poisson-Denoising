@@ -6,7 +6,7 @@ never inside a method).
               F* = min over 5000 FISTA iterations; iterations to reach
               F - F* <= 1e-3 F* and 1e-4 F*.
         B1.b  PSNR vs iteration (is the converged minimiser the best estimate?)
-        lam per peak from results/tune/B1.json; same F, lam, L = 1, alpha^0, rule.
+        lam per peak from results/tune/B1.json, or --lams; same F, lam, L = 1, alpha^0, rule.
     python -m experiments.convergence a1
         A1.a  explicit objective sum(x - y log x) + beta ||W_d x||_1 per P4IP iteration,
               from results/directions_A1/traces (paper schedule and constant rho).
@@ -31,7 +31,7 @@ from pdn import anscombe, data, experiment, metrics, sparse  # noqa: E402
 OUT = os.path.join(data.REPO, "results", "convergence")
 
 
-def b1(images, peaks, n_iter, n_star, rep=0):
+def b1(images, peaks, n_iter, n_star, lams=None, rep=0):
     with open(os.path.join(data.REPO, "experiments/configs/tune_B1.json")) as f:
         tcfg = json.load(f)
     spec = experiment.variant_spec(tcfg, "B1")
@@ -39,8 +39,10 @@ def b1(images, peaks, n_iter, n_star, rep=0):
     paths = {data.image_name(p): p for p in data.list_images("test")}
     for name in images:
         s = data.load_clean(paths[name])
-        for peak in peaks:
+        for peak, lam_in in [(pk, lm) for pk in peaks for lm in (lams or [None])]:
             prm = experiment.resolve_params(spec, peak)
+            if lam_in is not None:
+                prm["lam"] = lam_in
             x, y = data.simulate(s, peak, name, rep)
             z = anscombe.forward(y)
             fr = sparse.make_frame(y.shape, prm["frame"], prm["wavelet"], prm["levels"])
@@ -54,7 +56,7 @@ def b1(images, peaks, n_iter, n_star, rep=0):
                                      callback=cb)
                 gap = np.array([t["F"] - F_star for t in tr])
                 for t, g in zip(tr, gap):
-                    rows.append({"image": name, "peak": peak, "solver": solver, "iter": t["iter"],
+                    rows.append({"image": name, "peak": peak, "lam": prm["lam"], "solver": solver, "iter": t["iter"],
                                  "F": t["F"], "gap": g, "rel_gap": g / abs(F_star),
                                  "time": t["time"], "psnr": t["psnr"]})
                 hit = {e: next((t["iter"] for t, g in zip(tr, gap) if g <= e * abs(F_star)), None)
@@ -72,14 +74,14 @@ def b1(images, peaks, n_iter, n_star, rep=0):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    keys = sorted(set(zip(df.image, df.peak)))
+    keys = sorted(set(zip(df.image, df.peak, df.lam)))
     fig, ax = plt.subplots(len(keys), 3, figsize=(13, 3.2 * len(keys)), squeeze=False)
-    for i, (im, pk) in enumerate(keys):
-        for sv, g in df[(df.image == im) & (df.peak == pk)].groupby("solver"):
+    for i, (im, pk, lm) in enumerate(keys):
+        for sv, g in df[(df.image == im) & (df.peak == pk) & (df.lam == lm)].groupby("solver"):
             ax[i, 0].loglog(g.iter, np.maximum(g.rel_gap, 1e-16), label=sv)
             ax[i, 1].loglog(g.time, np.maximum(g.rel_gap, 1e-16), label=sv)
             ax[i, 2].semilogx(g.iter, g.psnr, label=sv)
-        ax[i, 0].set_ylabel(f"{im}, p={pk}\n(F-F*)/F*")
+        ax[i, 0].set_ylabel(f"{im}, p={pk}, lam={lm}\n(F-F*)/F*")
         for a_, xl in zip(ax[i], ("iteration", "wall time (s)", "iteration")):
             a_.set_xlabel(xl); a_.grid(alpha=.3); a_.legend(fontsize=8)
         ax[i, 2].set_ylabel("PSNR (dB)")
@@ -118,9 +120,12 @@ def main(argv=None):
     ap.add_argument("--peaks", type=float, nargs="*", default=[0.2, 1.0])
     ap.add_argument("--n-iter", type=int, default=1000)
     ap.add_argument("--n-star", type=int, default=5000)
+    ap.add_argument("--lams", type=float, nargs="*", default=None,
+                    help="lam values (default: tuned B1 lam). At the tuned lam the SWT solution can "
+                         "have all details zero after one step, which makes ISTA vs FISTA trivial.")
     a = ap.parse_args(argv)
     if a.what == "b1":
-        b1(a.images, a.peaks, a.n_iter, a.n_star)
+        b1(a.images, a.peaks, a.n_iter, a.n_star, a.lams)
     else:
         a1()
 
