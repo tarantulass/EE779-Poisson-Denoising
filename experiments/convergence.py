@@ -103,8 +103,8 @@ def a1():
             found = True
             ob = np.array([t["objective"] for t in tr])
             pk = f.split("__p")[1].split("__")[0]
-            ax[i].plot(np.arange(1, len(ob) + 1), (ob - ob.min()) / abs(ob.min()) + 1e-16, label=f"p={pk}")
-        ax[i].set_yscale("log"); ax[i].set_title(f"{lab} (cameraman): (obj - min)/|min|")
+            ax[i].plot(np.arange(1, len(ob)), (ob[:-1] - ob[-1]) / abs(ob[-1]), label=f"p={pk}")
+        ax[i].set_yscale("log"); ax[i].set_title(f"{lab} (cameraman): (obj_k - obj_final)/|obj_final|")
         ax[i].set_xlabel("P4IP iteration"); ax[i].grid(alpha=.3); ax[i].legend(fontsize=8)
     if not found:
         print("no A1.a traces yet: run experiments/configs/directions_A1.json first")
