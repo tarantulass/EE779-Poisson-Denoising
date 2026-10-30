@@ -37,16 +37,19 @@
   "grid": {
     "priors.0.params.c": [
       0.5,
+      1.0,
       2.0,
+      4.0,
       8.0
     ],
     "rho0": [
       0.5,
       2.0,
-      8.0
+      8.0,
+      32.0
     ]
   },
-  "_comment": "beta is fixed at 1 for eta=c*sigma: the denoiser depends on beta and c only via c*sqrt(beta/rho) (tests/test_directions.py), so (c, rho0) is the 2-D grid. A1.a has no c and tunes (beta, rho0).",
+  "_comment": "beta is fixed at 1 for eta=c*sigma: the denoiser depends on beta and c only via c*sqrt(beta/rho) (tests/test_directions.py), so (c, rho0) is the 2-D grid. A1.a has no c and tunes (beta, rho0). Stage 1 (3x3, factor 4) left most winners on the grid edge (results/tune/A1/grid.csv); grids were extended per the protocol to 5x4 (A1.a: larger beta, since eta = beta/rho falls with the increasing rho; hard threshold: larger c). Points already run are reused.",
   "variants": {
     "A1": {},
     "A1.a": {
@@ -88,11 +91,14 @@
   "variant_grids": {
     "A1.a": {
       "priors.0.beta": [
-        0.25,
         1.0,
-        4.0
+        4.0,
+        16.0,
+        64.0,
+        256.0
       ],
       "rho0": [
+        0.125,
         0.5,
         2.0,
         8.0
@@ -100,14 +106,32 @@
     },
     "A1.a_constrho": {
       "priors.0.beta": [
-        0.25,
         1.0,
-        4.0
+        4.0,
+        16.0,
+        64.0,
+        256.0
+      ],
+      "rho0": [
+        0.125,
+        0.5,
+        2.0,
+        8.0
+      ]
+    },
+    "A1.e_hard": {
+      "priors.0.params.c": [
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0
       ],
       "rho0": [
         0.5,
         2.0,
-        8.0
+        8.0,
+        32.0
       ]
     }
   }
