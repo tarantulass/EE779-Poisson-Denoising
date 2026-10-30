@@ -94,33 +94,62 @@ def load_dictionary(path):
     return _CACHE[full]
 
 
-def sparse_code(B, G, C, tol_sq=None, n_nonzero=None):
-    """OMP for each column of C (n_coded x M). tol_sq: residual squared-norm bound."""
-    from sklearn.linear_model import orthogonal_mp_gram
-
-    M = C.shape[1]
-    K = B.shape[1]
+def batch_omp(G, Xy, norms, tol_sq=None, max_atoms=16, chunk=4000):
+    """Batched OMP over all patches at once (numpy; equivalent to sklearn's per-patch
+    Gram OMP). Stops a patch when ||c - B alpha||^2 <= tol_sq or after max_atoms atoms.
+    G = B^T B (K x K), Xy = B^T C (K x M), norms = ||c_j||^2. Returns alpha (K x M)."""
+    K, M = Xy.shape
     A = np.zeros((K, M))
+    tol = -np.inf if tol_sq is None else float(tol_sq)
+    for c0 in range(0, M, chunk):
+        sl = slice(c0, min(c0 + chunk, M))
+        xy, nr = Xy[:, sl], norms[sl]
+        m = xy.shape[1]
+        idx = np.zeros((m, max_atoms), dtype=np.int64)
+        gam = [None] * m
+        active = nr > tol
+        res = xy.copy()                       # B^T (c - B alpha)
+        for k in range(max_atoms):
+            a = np.flatnonzero(active)
+            if a.size == 0:
+                break
+            r = np.abs(res[:, a])
+            if k:
+                r[idx[a, :k].T, np.arange(a.size)] = 0.0   # never re-pick an atom
+            idx[a, k] = np.argmax(r, axis=0)
+            S = idx[a, :k + 1]                              # (n, k+1)
+            Gs = G[S[:, :, None], S[:, None, :]]            # (n, k+1, k+1)
+            b = xy[S, a[:, None]]                           # (n, k+1)
+            g = np.linalg.solve(Gs, b[..., None])[..., 0]   # (n, k+1)
+            err = nr[a] - np.einsum("ij,ij->i", b, g)
+            # update residual correlations for the active patches
+            res[:, a] = xy[:, a] - np.einsum("kni,ni->kn", G[:, S], g)
+            for t, j in enumerate(a):
+                gam[j] = (S[t].copy(), g[t].copy())
+            active[a[err <= tol]] = False
+        for j, sg in enumerate(gam):
+            if sg is not None:
+                A[sg[0], c0 + j] = sg[1]
+    return A
+
+
+def sparse_code(B, G, C, tol_sq=None, n_nonzero=None, max_atoms=16):
+    """alpha for each column of C (n_coded x M): error-constrained (tol_sq, capped at
+    max_atoms) or fixed sparsity (n_nonzero)."""
     norms = np.einsum("ij,ij->j", C, C)
     if n_nonzero is not None:
-        active = norms > 0
-        if active.any():
-            A[:, active] = orthogonal_mp_gram(G, B.T @ C[:, active],
-                                              n_nonzero_coefs=int(n_nonzero)).reshape(K, -1)
-        return A
-    active = norms > tol_sq  # patches already within the noise level get alpha = 0
-    if active.any():
-        A[:, active] = orthogonal_mp_gram(G, B.T @ C[:, active], tol=float(tol_sq),
-                                          norms_squared=norms[active]).reshape(K, -1)
-    return A
+        return batch_omp(G, B.T @ C, norms, None, int(n_nonzero))
+    return batch_omp(G, B.T @ C, norms, tol_sq, int(max_atoms))
 
 
 @register("wavelet_dict")
 def wavelet_dict(r: np.ndarray, sigma: float, dict: str = "models/a2_default.npz",
                  stride: int = 2, gamma: float = 1.15, sparsity: int | None = None,
-                 weights: str = "uniform") -> np.ndarray:
+                 weights: str = "uniform", max_atoms: int = 16) -> np.ndarray:
     """A2 denoiser. sparsity=T switches to fixed-sparsity OMP (A2.7);
-    weights='sparsity' uses w_j = 1/(1+||alpha_j||_0) (A2.6)."""
+    weights='sparsity' uses w_j = 1/(1+||alpha_j||_0) (A2.6).
+    max_atoms caps error-constrained OMP (default P^2/4 = 16): late in P4IP sigma is
+    small and uncapped OMP used ~30 atoms per patch (53 s per call on 256x256)."""
     r = np.asarray(r, dtype=np.float64)
     B, meta, G = load_dictionary(dict)
     P = int(meta["P"])
@@ -130,7 +159,8 @@ def wavelet_dict(r: np.ndarray, sigma: float, dict: str = "models/a2_default.npz
     C = (pat - m) @ T.T                      # rows: patches, cols: coefficients
     Ck = C[:, cm].T                          # n_coded x M
     n = Ck.shape[0]
-    A = sparse_code(B, G, Ck, tol_sq=n * (gamma * sigma) ** 2, n_nonzero=sparsity)
+    A = sparse_code(B, G, Ck, tol_sq=n * (gamma * sigma) ** 2, n_nonzero=sparsity,
+                    max_atoms=max_atoms)
     C_hat = C.copy()
     C_hat[:, cm] = (B @ A).T
     rec = C_hat @ T + m                      # T orthonormal: T^{-1} = T^T

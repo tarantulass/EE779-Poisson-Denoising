@@ -99,7 +99,7 @@ def test_complete_dictionary_at_zero_noise_returns_input(tmp_path):
     P = 8
     path = _save(tmp_path, "eye", np.eye(48), P, "wavelet", "pass")
     r = RNG.normal(5, 2, (40, 40))
-    out = dictionary.wavelet_dict(r, 1e-6, dict=path, stride=3)
+    out = dictionary.wavelet_dict(r, 1e-6, dict=path, stride=3, max_atoms=48)
     assert np.allclose(out, r, atol=1e-6)
 
 
@@ -167,3 +167,19 @@ def test_fixed_coarse_band_keeps_local_mean():
     a, _ = sparse.solve(z, 1.0, fr, solver="fista", max_iter=300, tol=1e-8)
     assert np.allclose(a[0], fr.analysis(z)[0])
     assert abs(fr.synthesis(a).mean() - z.mean()) < 0.05
+
+
+def test_batch_omp_matches_sklearn():
+    from sklearn.linear_model import orthogonal_mp_gram
+    B = RNG.normal(size=(48, 128)); B /= np.linalg.norm(B, axis=0)
+    C = RNG.normal(size=(48, 500))
+    G, nr = B.T @ B, (C ** 2).sum(0)
+    tol = 0.3 * nr.mean()
+    a = dictionary.batch_omp(G, B.T @ C, nr, tol, 48, chunk=128)
+    b = orthogonal_mp_gram(G, B.T @ C, tol=tol, norms_squared=nr)
+    assert np.allclose(a, b, atol=1e-10)
+    a = dictionary.batch_omp(G, B.T @ C, nr, None, 5)
+    b = orthogonal_mp_gram(G, B.T @ C, n_nonzero_coefs=5)
+    assert np.allclose(a, b, atol=1e-10)
+    a = dictionary.batch_omp(G, B.T @ C, nr, 1e-12, 3)   # cap binds
+    assert np.all(np.count_nonzero(a, axis=0) <= 3)
