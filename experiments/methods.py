@@ -53,7 +53,7 @@ def consensus_grid(peak, tuned):
 
 
 def sparse_grid(peak, tuned):
-    return product(lam=[0.5, 1, 2, 4, 8, 16, 32])
+    return product(lam=[0.25, 0.5, 0.71, 1, 1.41, 2, 2.83, 4, 8, 16])
 
 
 # Slide 3: conventional methods

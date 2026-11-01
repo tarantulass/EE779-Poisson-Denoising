@@ -39,40 +39,60 @@ def test_binning_keeps_a_constant_image():  # slide 12
 
 
 class OrthonormalDWT:
-    """D = W^T for an orthonormal DWT: slide 17 says the solution is one soft-threshold step."""
+    """D = W_d^T, the detail part of an orthonormal DWT: slide 17 says the solution is one soft-threshold step."""
     def __init__(self, shape):
-        self.slices = None; self.L = 1.0; self.shape = shape
-        a, self.slices = pywt.coeffs_to_array(pywt.wavedec2(np.zeros(shape), "db4", "periodization", 3))
-        self.weights = np.ones_like(a); self.weights[self.slices[0]] = 0
+        self.L = 1.0
+        c, self.slices = pywt.coeffs_to_array(pywt.wavedec2(np.zeros(shape), "db4", "periodization", 3))
+        self.detail = np.ones(c.shape, bool)
+        self.detail[self.slices[0]] = False
 
-    def fixed(self, z):
-        return self.analysis(z)
-
-    def analysis(self, img):
+    def _full(self, img):
         return pywt.coeffs_to_array(pywt.wavedec2(img, "db4", "periodization", 3))[0]
 
+    def _inverse(self, c):
+        return pywt.waverec2(pywt.array_to_coeffs(c, self.slices, "wavedec2"), "db4", "periodization")
+
+    def lowpass(self, z):
+        return self._inverse(np.where(self.detail, 0.0, self._full(z)))
+
+    def analysis(self, img):
+        return np.where(self.detail, self._full(img), 0.0)
+
     def synthesis(self, a):
-        return pywt.waverec2(pywt.array_to_coeffs(a, self.slices, "wavedec2"), "db4", "periodization")
+        return self._inverse(np.where(self.detail, a, 0.0))
 
 
 def test_ista_fista_orthonormal_special_case():  # slide 17
     z = np.random.default_rng(2).normal(2, 1, (64, 64))
     D, lam = OrthonormalDWT(z.shape), 0.7
-    c = D.analysis(z)
-    one_step = np.sign(c) * np.maximum(np.abs(c) - lam * D.weights, 0)
+    r = z - D.lowpass(z)
+    c = D.analysis(r)
+    one_step = np.sign(c) * np.maximum(np.abs(c) - lam, 0)
     for acc in (False, True):
-        a, _ = solve(z, D, lam, accelerated=acc, tol=1e-12)
+        a, _ = solve(r, D, lam, accelerated=acc, tol=1e-12)
         assert np.allclose(a, one_step, atol=1e-8)
 
 
 def test_ista_and_fista_reach_the_same_objective():  # slide 11, redundant frame
     z = anscombe(np.random.default_rng(3).poisson(2.0, (64, 64)).astype(float))
     D = SWT(z.shape)
-    assert np.allclose(D.synthesis(D.analysis(z)), z)  # Parseval frame
-    Fi = solve(z, D, 0.5, False, max_iter=5000, tol=1e-10)[1]
-    Ff = solve(z, D, 0.5, True, max_iter=5000, tol=1e-10)[1]
+    a = np.random.default_rng(5).normal(size=D.analysis(z).shape)
+    v = np.random.default_rng(6).normal(size=z.shape)
+    assert np.isclose(np.sum(D.synthesis(a) * v), np.sum(a * D.analysis(v)))  # adjoint
+    r = z - D.lowpass(z)
+    Fi = solve(r, D, 0.5, False, max_iter=5000, tol=1e-12)[1]
+    Ff = solve(r, D, 0.5, True, max_iter=5000, tol=1e-12)[1]
     assert abs(Fi[-1] - Ff[-1]) < 1e-4 * Ff[-1]
     assert len(Ff) < len(Fi)  # FISTA needs fewer iterations
+
+
+def test_patch_dictionary_lowpass_keeps_flat_images():  # direction B, 'dict'
+    from experiments.direction_b.ista_fista import PatchDictionary
+    D = PatchDictionary((40, 44))
+    assert np.allclose(D.lowpass(np.full((40, 44), 3.0)), 3.0)
+    a = np.random.default_rng(7).normal(size=D.analysis(np.zeros((40, 44))).shape)
+    v = np.random.default_rng(8).normal(size=(40, 44))
+    assert np.isclose(np.sum(D.synthesis(a) * v), np.sum(a * D.analysis(v)))  # adjoint
 
 
 def test_patch_haar_and_split_merge():  # slide 16
