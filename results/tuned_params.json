@@ -171,9 +171,7 @@
     "size": 9
    },
    "tune_psnr": 19.348823301485886,
-   "at_grid_edge": [
-    "size"
-   ]
+   "at_grid_edge": []
   },
   "4.0": {
    "params": {
@@ -230,7 +228,7 @@
  "nl_means": {
   "0.1": {
    "params": {
-    "h": 0.4
+    "h": 0.1
    },
    "tune_psnr": 14.852230038717806,
    "at_grid_edge": [
@@ -239,7 +237,7 @@
   },
   "0.2": {
    "params": {
-    "h": 0.4
+    "h": 0.1
    },
    "tune_psnr": 16.977525925714982,
    "at_grid_edge": [
@@ -251,18 +249,14 @@
     "h": 0.4
    },
    "tune_psnr": 19.14087637334907,
-   "at_grid_edge": [
-    "h"
-   ]
+   "at_grid_edge": []
   },
   "1.0": {
    "params": {
-    "h": 1.2
+    "h": 1.6
    },
-   "tune_psnr": 20.2762031753071,
-   "at_grid_edge": [
-    "h"
-   ]
+   "tune_psnr": 20.27628980709774,
+   "at_grid_edge": []
   },
   "2.0": {
    "params": {
@@ -283,43 +277,42 @@
   "0.1": {
    "params": {
     "lam": 10,
-    "tau": 0.001
+    "tau": 0.0003
    },
-   "tune_psnr": 12.090307806382537,
+   "tune_psnr": 15.022587299385233,
    "at_grid_edge": [
-    "lam",
     "tau"
    ]
   },
   "0.2": {
    "params": {
     "lam": 10,
-    "tau": 0.001
+    "tau": 0.0003
    },
-   "tune_psnr": 15.014370630950083,
+   "tune_psnr": 17.997825632772653,
    "at_grid_edge": [
-    "lam",
     "tau"
    ]
   },
   "0.5": {
    "params": {
     "lam": 10,
-    "tau": 0.001
+    "tau": 0.0003
    },
-   "tune_psnr": 18.87265289918031,
+   "tune_psnr": 19.44770188092235,
    "at_grid_edge": [
-    "lam",
     "tau"
    ]
   },
   "1.0": {
    "params": {
-    "lam": 3,
-    "tau": 0.003
+    "lam": 10,
+    "tau": 0.0003
    },
-   "tune_psnr": 20.35783771203895,
-   "at_grid_edge": []
+   "tune_psnr": 20.380296923514777,
+   "at_grid_edge": [
+    "tau"
+   ]
   },
   "2.0": {
    "params": {
@@ -327,9 +320,7 @@
     "tau": 0.001
    },
    "tune_psnr": 21.40995699365068,
-   "at_grid_edge": [
-    "tau"
-   ]
+   "at_grid_edge": []
   },
   "4.0": {
    "params": {
@@ -337,9 +328,7 @@
     "tau": 0.03
    },
    "tune_psnr": 22.369545155388145,
-   "at_grid_edge": [
-    "tau"
-   ]
+   "at_grid_edge": []
   }
  },
  "anscombe_bm3d": {
@@ -540,7 +529,7 @@
   },
   "0.2": {
    "params": {
-    "lam": 2
+    "lam": 1.41
    },
    "tune_psnr": 18.169448060168683,
    "at_grid_edge": []
@@ -563,14 +552,14 @@
    "params": {
     "lam": 2
    },
-   "tune_psnr": 20.277828069125363,
+   "tune_psnr": 20.277827090741894,
    "at_grid_edge": []
   },
   "4.0": {
    "params": {
     "lam": 2
    },
-   "tune_psnr": 20.454622464941433,
+   "tune_psnr": 20.45461588280979,
    "at_grid_edge": []
   }
  },
@@ -585,7 +574,7 @@
   },
   "0.2": {
    "params": {
-    "lam": 2
+    "lam": 1.41
    },
    "tune_psnr": 18.169448060168683,
    "at_grid_edge": [],
@@ -611,7 +600,7 @@
    "params": {
     "lam": 2
    },
-   "tune_psnr": 20.277828069125363,
+   "tune_psnr": 20.277827090741894,
    "at_grid_edge": [],
    "note": "same parameters as B_fista_swt"
   },
@@ -619,7 +608,7 @@
    "params": {
     "lam": 2
    },
-   "tune_psnr": 20.454622464941433,
+   "tune_psnr": 20.45461588280979,
    "at_grid_edge": [],
    "note": "same parameters as B_fista_swt"
   }
@@ -685,69 +674,555 @@
  "B_fista_dict": {
   "0.1": {
    "params": {
-    "lam": 1
+    "lam": 2.83
    },
-   "tune_psnr": 7.571801430054369,
+   "tune_psnr": 13.646715692357018,
    "at_grid_edge": []
   },
   "0.2": {
    "params": {
-    "lam": 1
+    "lam": 2.83
    },
-   "tune_psnr": 10.293891721577804,
+   "tune_psnr": 16.031144412960206,
    "at_grid_edge": []
   },
   "0.5": {
    "params": {
-    "lam": 2
+    "lam": 4
    },
-   "tune_psnr": 14.16893501448843,
+   "tune_psnr": 18.676965615501164,
    "at_grid_edge": []
   },
   "1.0": {
    "params": {
-    "lam": 2
+    "lam": 4
    },
-   "tune_psnr": 16.93405056167806,
+   "tune_psnr": 20.07689904927372,
    "at_grid_edge": []
   },
   "2.0": {
    "params": {
-    "lam": 2
+    "lam": 4
    },
-   "tune_psnr": 18.56645188076577,
+   "tune_psnr": 21.127132450121923,
    "at_grid_edge": []
   },
   "4.0": {
    "params": {
-    "lam": 2
+    "lam": 2.83
    },
-   "tune_psnr": 19.967493285413163,
+   "tune_psnr": 21.933408440203834,
    "at_grid_edge": []
   }
  },
  "B_ista_dict": {
   "0.1": {
    "params": {
-    "lam": 1
+    "lam": 2.83
    },
-   "tune_psnr": 7.571801430054369,
+   "tune_psnr": 13.646715692357018,
    "at_grid_edge": [],
    "note": "same parameters as B_fista_dict"
   },
   "0.2": {
    "params": {
-    "lam": 1
+    "lam": 2.83
    },
-   "tune_psnr": 10.293891721577804,
+   "tune_psnr": 16.031144412960206,
    "at_grid_edge": [],
    "note": "same parameters as B_fista_dict"
   },
   "0.5": {
    "params": {
+    "lam": 4
+   },
+   "tune_psnr": 18.676965615501164,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_dict"
+  },
+  "1.0": {
+   "params": {
+    "lam": 4
+   },
+   "tune_psnr": 20.07689904927372,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_dict"
+  },
+  "2.0": {
+   "params": {
+    "lam": 4
+   },
+   "tune_psnr": 21.127132450121923,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_dict"
+  },
+  "4.0": {
+   "params": {
+    "lam": 2.83
+   },
+   "tune_psnr": 21.933408440203834,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_dict"
+  }
+ },
+ "mean_filter@bin3": {
+  "0.1": {
+   "params": {
+    "size": 15
+   },
+   "tune_psnr": 17.94425817099204,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "size": 9
+   },
+   "tune_psnr": 18.803135791340864,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "size": 7
+   },
+   "tune_psnr": 19.571389584715725,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {
+    "size": 5
+   },
+   "tune_psnr": 20.419189614154902,
+   "at_grid_edge": []
+  },
+  "2.0": {
+   "params": {
+    "size": 3
+   },
+   "tune_psnr": 21.27547483480238,
+   "at_grid_edge": [
+    "size"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "size": 3
+   },
+   "tune_psnr": 22.0213323763706,
+   "at_grid_edge": [
+    "size"
+   ]
+  }
+ },
+ "gaussian_filter@bin3": {
+  "0.1": {
+   "params": {
+    "sigma": 4
+   },
+   "tune_psnr": 18.322458912982164,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "sigma": 3
+   },
+   "tune_psnr": 19.19609949336586,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "sigma": 2
+   },
+   "tune_psnr": 19.93911884229904,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {
+    "sigma": 1.5
+   },
+   "tune_psnr": 20.7550934159943,
+   "at_grid_edge": []
+  },
+  "2.0": {
+   "params": {
+    "sigma": 1
+   },
+   "tune_psnr": 21.516442151665597,
+   "at_grid_edge": []
+  },
+  "4.0": {
+   "params": {
+    "sigma": 1
+   },
+   "tune_psnr": 22.146010525317223,
+   "at_grid_edge": []
+  }
+ },
+ "median_filter@bin3": {
+  "0.1": {
+   "params": {
+    "size": 5
+   },
+   "tune_psnr": 7.432490284639091,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "size": 13
+   },
+   "tune_psnr": 13.411238036017153,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "size": 7
+   },
+   "tune_psnr": 18.096024549927737,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {
+    "size": 5
+   },
+   "tune_psnr": 19.853476189234712,
+   "at_grid_edge": []
+  },
+  "2.0": {
+   "params": {
+    "size": 3
+   },
+   "tune_psnr": 20.725270832149185,
+   "at_grid_edge": [
+    "size"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "size": 3
+   },
+   "tune_psnr": 21.794100727830582,
+   "at_grid_edge": [
+    "size"
+   ]
+  }
+ },
+ "wiener_filter@bin3": {
+  "0.1": {
+   "params": {
+    "size": 7
+   },
+   "tune_psnr": 14.870883404349721,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "size": 7
+   },
+   "tune_psnr": 16.89333026882659,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "size": 5
+   },
+   "tune_psnr": 18.86649106775809,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {
+    "size": 5
+   },
+   "tune_psnr": 20.2395213916468,
+   "at_grid_edge": []
+  },
+  "2.0": {
+   "params": {
+    "size": 5
+   },
+   "tune_psnr": 21.34470475047327,
+   "at_grid_edge": []
+  },
+  "4.0": {
+   "params": {
+    "size": 5
+   },
+   "tune_psnr": 22.43391722046368,
+   "at_grid_edge": []
+  }
+ },
+ "nl_means@bin3": {
+  "0.1": {
+   "params": {
+    "h": 0.6
+   },
+   "tune_psnr": 17.97957559798024,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "h": 0.8
+   },
+   "tune_psnr": 18.732032182556104,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "h": 0.6
+   },
+   "tune_psnr": 19.808844764434337,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {
+    "h": 0.4
+   },
+   "tune_psnr": 20.92831527714911,
+   "at_grid_edge": []
+  },
+  "2.0": {
+   "params": {
+    "h": 0.4
+   },
+   "tune_psnr": 21.83358567790018,
+   "at_grid_edge": []
+  },
+  "4.0": {
+   "params": {
+    "h": 0.4
+   },
+   "tune_psnr": 22.785661751243268,
+   "at_grid_edge": []
+  }
+ },
+ "poisson_tv@bin3": {
+  "0.1": {
+   "params": {
+    "lam": 3,
+    "tau": 0.003
+   },
+   "tune_psnr": 18.03813768067881,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "lam": 3,
+    "tau": 0.001
+   },
+   "tune_psnr": 19.041771691013402,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "lam": 3,
+    "tau": 0.001
+   },
+   "tune_psnr": 19.926583618297933,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {
+    "lam": 3,
+    "tau": 0.001
+   },
+   "tune_psnr": 20.64531299609476,
+   "at_grid_edge": []
+  },
+  "2.0": {
+   "params": {
+    "lam": 0.3,
+    "tau": 0.03
+   },
+   "tune_psnr": 21.73340856216734,
+   "at_grid_edge": [
+    "lam"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "lam": 0.3,
+    "tau": 0.03
+   },
+   "tune_psnr": 22.570751595901754,
+   "at_grid_edge": [
+    "lam"
+   ]
+  }
+ },
+ "B_fista_swt@bin3": {
+  "0.1": {
+   "params": {
     "lam": 2
    },
-   "tune_psnr": 14.16893501448843,
+   "tune_psnr": 11.439721354999488,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "lam": 1
+   },
+   "tune_psnr": 12.501747623915143,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "lam": 0.25
+   },
+   "tune_psnr": 15.009220774703998,
+   "at_grid_edge": [
+    "lam"
+   ]
+  },
+  "1.0": {
+   "params": {
+    "lam": 0.25
+   },
+   "tune_psnr": 17.297626572851083,
+   "at_grid_edge": [
+    "lam"
+   ]
+  },
+  "2.0": {
+   "params": {
+    "lam": 0.25
+   },
+   "tune_psnr": 19.218082956158003,
+   "at_grid_edge": [
+    "lam"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "lam": 0.25
+   },
+   "tune_psnr": 20.875152740942646,
+   "at_grid_edge": [
+    "lam"
+   ]
+  }
+ },
+ "B_ista_swt@bin3": {
+  "0.1": {
+   "params": {
+    "lam": 2
+   },
+   "tune_psnr": 11.439721354999488,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_swt"
+  },
+  "0.2": {
+   "params": {
+    "lam": 1
+   },
+   "tune_psnr": 12.501747623915143,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_swt"
+  },
+  "0.5": {
+   "params": {
+    "lam": 0.25
+   },
+   "tune_psnr": 15.009220774703998,
+   "at_grid_edge": [
+    "lam"
+   ],
+   "note": "same parameters as B_fista_swt"
+  },
+  "1.0": {
+   "params": {
+    "lam": 0.25
+   },
+   "tune_psnr": 17.297626572851083,
+   "at_grid_edge": [
+    "lam"
+   ],
+   "note": "same parameters as B_fista_swt"
+  },
+  "2.0": {
+   "params": {
+    "lam": 0.25
+   },
+   "tune_psnr": 19.218082956158003,
+   "at_grid_edge": [
+    "lam"
+   ],
+   "note": "same parameters as B_fista_swt"
+  },
+  "4.0": {
+   "params": {
+    "lam": 0.25
+   },
+   "tune_psnr": 20.875152740942646,
+   "at_grid_edge": [
+    "lam"
+   ],
+   "note": "same parameters as B_fista_swt"
+  }
+ },
+ "B_fista_dict@bin3": {
+  "0.1": {
+   "params": {
+    "lam": 2.83
+   },
+   "tune_psnr": 17.991441536313765,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "lam": 4
+   },
+   "tune_psnr": 18.84648807218815,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "lam": 2.83
+   },
+   "tune_psnr": 19.641677805735696,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {
+    "lam": 2
+   },
+   "tune_psnr": 20.552504826827526,
+   "at_grid_edge": []
+  },
+  "2.0": {
+   "params": {
+    "lam": 2
+   },
+   "tune_psnr": 21.43581538315495,
+   "at_grid_edge": []
+  },
+  "4.0": {
+   "params": {
+    "lam": 1.41
+   },
+   "tune_psnr": 22.321857396070197,
+   "at_grid_edge": []
+  }
+ },
+ "B_ista_dict@bin3": {
+  "0.1": {
+   "params": {
+    "lam": 2.83
+   },
+   "tune_psnr": 17.991441536313765,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_dict"
+  },
+  "0.2": {
+   "params": {
+    "lam": 4
+   },
+   "tune_psnr": 18.84648807218815,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_dict"
+  },
+  "0.5": {
+   "params": {
+    "lam": 2.83
+   },
+   "tune_psnr": 19.641677805735696,
    "at_grid_edge": [],
    "note": "same parameters as B_fista_dict"
   },
@@ -755,7 +1230,7 @@
    "params": {
     "lam": 2
    },
-   "tune_psnr": 16.93405056167806,
+   "tune_psnr": 20.552504826827526,
    "at_grid_edge": [],
    "note": "same parameters as B_fista_dict"
   },
@@ -763,17 +1238,329 @@
    "params": {
     "lam": 2
    },
-   "tune_psnr": 18.56645188076577,
+   "tune_psnr": 21.43581538315495,
    "at_grid_edge": [],
    "note": "same parameters as B_fista_dict"
   },
   "4.0": {
    "params": {
-    "lam": 2
+    "lam": 1.41
    },
-   "tune_psnr": 19.967493285413163,
+   "tune_psnr": 22.321857396070197,
    "at_grid_edge": [],
    "note": "same parameters as B_fista_dict"
+  }
+ },
+ "wavelet_threshold@bin3": {
+  "0.1": {
+   "params": {
+    "c": 2
+   },
+   "tune_psnr": 17.357940922564776,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "c": 2
+   },
+   "tune_psnr": 18.233192569092413,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "c": 2
+   },
+   "tune_psnr": 19.13248007746699,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {
+    "c": 2
+   },
+   "tune_psnr": 19.85163580224045,
+   "at_grid_edge": []
+  },
+  "2.0": {
+   "params": {
+    "c": 1
+   },
+   "tune_psnr": 20.989056252411363,
+   "at_grid_edge": [
+    "c"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "c": 1
+   },
+   "tune_psnr": 22.08059118714146,
+   "at_grid_edge": [
+    "c"
+   ]
+  }
+ },
+ "anscombe_bm3d@bin3": {
+  "0.1": {
+   "params": {},
+   "tune_psnr": 18.231439177217435,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {},
+   "tune_psnr": 19.399738092018925,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {},
+   "tune_psnr": 20.355426788662353,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {},
+   "tune_psnr": 21.305190752181797,
+   "at_grid_edge": []
+  },
+  "2.0": {
+   "params": {},
+   "tune_psnr": 22.08730016279662,
+   "at_grid_edge": []
+  },
+  "4.0": {
+   "params": {},
+   "tune_psnr": 22.97163145044558,
+   "at_grid_edge": []
+  }
+ },
+ "anscombe_bm3d_algebraic@bin3": {
+  "0.1": {
+   "params": {},
+   "tune_psnr": 15.28664205920592,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {},
+   "tune_psnr": 16.935041808871567,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {},
+   "tune_psnr": 19.132383961195032,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {},
+   "tune_psnr": 20.806293097127913,
+   "at_grid_edge": []
+  },
+  "2.0": {
+   "params": {},
+   "tune_psnr": 21.908309552710993,
+   "at_grid_edge": []
+  },
+  "4.0": {
+   "params": {},
+   "tune_psnr": 22.924623350031474,
+   "at_grid_edge": []
+  }
+ },
+ "A1_wavelet@bin3": {
+  "0.1": {
+   "params": {
+    "lam": 6.324555320336758,
+    "rho0": 10.0
+   },
+   "tune_psnr": 17.132857764230927,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "lam": 4.472135954999579,
+    "rho0": 5.0
+   },
+   "tune_psnr": 17.845745221734152,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "lam": 1.4142135623730951,
+    "rho0": 0.5
+   },
+   "tune_psnr": 18.99559477026503,
+   "at_grid_edge": [
+    "rho0"
+   ]
+  },
+  "1.0": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 0.25
+   },
+   "tune_psnr": 19.809670391546216,
+   "at_grid_edge": [
+    "rho0"
+   ]
+  },
+  "2.0": {
+   "params": {
+    "lam": 0.3535533905932738,
+    "rho0": 0.125
+   },
+   "tune_psnr": 20.95753150873616,
+   "at_grid_edge": [
+    "rho0"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "lam": 0.25,
+    "rho0": 0.0625
+   },
+   "tune_psnr": 22.115341689010876,
+   "at_grid_edge": [
+    "rho0"
+   ]
+  }
+ },
+ "A1_subband@bin3": {
+  "0.1": {
+   "params": {
+    "lam": 6.324555320336758,
+    "rho0": 10.0,
+    "w1": 4.0,
+    "w2": 2.0,
+    "w3": 0.5,
+    "w4": 0.5
+   },
+   "tune_psnr": 17.3445540308229,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "lam": 4.472135954999579,
+    "rho0": 5.0,
+    "w1": 2.0,
+    "w2": 1.0,
+    "w3": 0.5,
+    "w4": 0.25
+   },
+   "tune_psnr": 18.529424461128087,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "lam": 1.4142135623730951,
+    "rho0": 0.5,
+    "w1": 2.0,
+    "w2": 1.0,
+    "w3": 0.5,
+    "w4": 0.5
+   },
+   "tune_psnr": 19.621136336957587,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 0.25,
+    "w1": 2.0,
+    "w2": 0.5,
+    "w3": 0.5,
+    "w4": 0.25
+   },
+   "tune_psnr": 20.47330314758015,
+   "at_grid_edge": []
+  },
+  "2.0": {
+   "params": {
+    "lam": 0.3535533905932738,
+    "rho0": 0.125,
+    "w1": 2.0,
+    "w2": 1.0,
+    "w3": 0.5,
+    "w4": 0.25
+   },
+   "tune_psnr": 21.37662635236454,
+   "at_grid_edge": []
+  },
+  "4.0": {
+   "params": {
+    "lam": 0.25,
+    "rho0": 0.0625,
+    "w1": 1.0,
+    "w2": 0.5,
+    "w3": 0.25,
+    "w4": 0.25
+   },
+   "tune_psnr": 22.272528081039827,
+   "at_grid_edge": []
+  }
+ },
+ "spda@bin3": {
+  "0.1": {
+   "params": {
+    "patch": 16,
+    "K": 2
+   },
+   "tune_psnr": 18.37226150631206,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "patch": 16,
+    "K": 3
+   },
+   "tune_psnr": 19.186596310055116,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "patch": 8,
+    "K": 2
+   },
+   "tune_psnr": 20.040724752552446,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {
+    "patch": 8,
+    "K": 4
+   },
+   "tune_psnr": 20.939724480594677,
+   "at_grid_edge": [
+    "K"
+   ]
+  },
+  "2.0": {
+   "params": {
+    "patch": 8,
+    "K": 4
+   },
+   "tune_psnr": 21.477191840297237,
+   "at_grid_edge": [
+    "K"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "patch": 8,
+    "K": 4
+   },
+   "tune_psnr": 21.897720844937254,
+   "at_grid_edge": [
+    "K"
+   ]
+  }
+ },
+ "p4ip_bm3d@bin3": {
+  "0.1": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 10.0
+   },
+   "tune_psnr": 18.266994999220586,
+   "at_grid_edge": [
+    "rho0"
+   ]
   }
  }
 }
