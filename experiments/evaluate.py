@@ -62,9 +62,14 @@ def tuned_params(method, peak, b):
     return tuned[key][str(float(peak))]["params"]
 
 
-def evaluate(methods, peaks, reps, b, workers):
+def evaluate(methods, peaks, reps, b, workers, force=False):
     out = os.path.join(RESULTS, f"test_bin{b}.csv" if b else "test.csv")
     done = set()
+    if force and os.path.exists(out):  # drop earlier rows of these methods
+        with open(out) as f:
+            keep = [r for r in csv.DictReader(f) if r["method"] not in methods]
+        with open(out, "w", newline="") as f:
+            w = csv.DictWriter(f, FIELDS); w.writeheader(); w.writerows(keep)
     if os.path.exists(out):
         with open(out) as f:
             done = {(r["method"], r["image"], float(r["peak"]), int(r["rep"])) for r in csv.DictReader(f)}
@@ -149,13 +154,14 @@ def main():
     ap.add_argument("--reps", type=int, default=1, help="noise realisations per image")
     ap.add_argument("--bin", type=int, default=0)
     ap.add_argument("--workers", type=int, default=os.cpu_count())
+    ap.add_argument("--force", action="store_true", help="rerun methods that already have results")
     ap.add_argument("--summary", action="store_true")
     ap.add_argument("--ref", default="anscombe_bm3d")
     a = ap.parse_args()
     if a.summary:
         return summary(a.ref)
     methods = list(METHODS) if a.methods == ["all"] else a.methods
-    evaluate(methods, a.peaks, a.reps, a.bin, a.workers)
+    evaluate(methods, a.peaks, a.reps, a.bin, a.workers, a.force)
 
 
 if __name__ == "__main__":

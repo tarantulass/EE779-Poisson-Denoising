@@ -36,19 +36,19 @@ def none(peak, tuned):
 
 
 def p4ip_sigma_grid(peak, tuned):
-    return [{"lam": (s * np.sqrt(peak)) ** 2 * r / peak, "rho0": r / peak}
+    return [{"lam": float((s * np.sqrt(peak)) ** 2 * r / peak), "rho0": float(r / peak)}
             for s in (0.5, 1, 2) for r in (1, 4, 16)]
 
 
 def wavelet_grid(peak, tuned):
-    return [{"lam": c * np.sqrt(peak) * r / peak, "rho0": r / peak}
+    return [{"lam": float(c * np.sqrt(peak) * r / peak), "rho0": float(r / peak)}
             for c in (0.25, 0.5, 1, 2, 4) for r in (0.25, 1, 4, 16, 64)]
 
 
 def consensus_grid(peak, tuned):
     """BM3D weight and rho0 from the tuned P4IP-BM3D; grid the wavelet weight lam2 (slide 15)."""
     b = tuned["p4ip_bm3d"]
-    return [{"lam1": b["lam"], "rho0": b["rho0"], "lam2": c * np.sqrt(peak) * b["rho0"]}
+    return [{"lam1": b["lam"], "rho0": b["rho0"], "lam2": float(c * np.sqrt(peak) * b["rho0"])}
             for c in (0.125, 0.25, 0.5, 1, 2)]
 
 
@@ -58,14 +58,14 @@ def sparse_grid(peak, tuned):
 
 # Slide 3: conventional methods
 CONVENTIONAL = {
-    "mean_filter":       (conventional.mean_filter, {}, lambda p, t: product(size=[3, 5, 7, 9, 11])),
-    "gaussian_filter":   (conventional.gaussian_filter, {}, lambda p, t: product(sigma=[0.5, 1, 1.5, 2, 3, 4])),
-    "median_filter":     (conventional.median_filter, {}, lambda p, t: product(size=[3, 5, 7, 9])),
-    "wiener_filter":     (conventional.wiener_filter, {}, lambda p, t: product(size=[3, 5, 7, 9])),
+    "mean_filter":       (conventional.mean_filter, {}, lambda p, t: product(size=[3, 5, 7, 9, 11, 15, 21, 31])),
+    "gaussian_filter":   (conventional.gaussian_filter, {}, lambda p, t: product(sigma=[0.5, 1, 1.5, 2, 3, 4, 6, 8, 12])),
+    "median_filter":     (conventional.median_filter, {}, lambda p, t: product(size=[3, 5, 7, 9, 13, 17, 25, 33])),
+    "wiener_filter":     (conventional.wiener_filter, {}, lambda p, t: product(size=[3, 5, 7, 9, 13, 17, 25])),
     "wavelet_threshold": (conventional.wavelet_threshold, {}, lambda p, t: product(c=[1, 2, 3, 4, 5])),
-    "nl_means":          (conventional.nl_means, {}, lambda p, t: product(h=[0.4, 0.6, 0.8, 1.0, 1.2])),
+    "nl_means":          (conventional.nl_means, {}, lambda p, t: product(h=[0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.6, 2.4])),
     "poisson_tv":        (conventional.poisson_tv, {},
-                          lambda p, t: product(lam=[0.1, 0.3, 1, 3, 10], tau=[0.001, 0.003, 0.01, 0.03])),
+                          lambda p, t: product(lam=[0.3, 1, 3, 10, 30], tau=[0.0003, 0.001, 0.003, 0.01, 0.03, 0.1])),
 }
 
 # Slide 12: baselines
