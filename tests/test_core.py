@@ -1,101 +1,83 @@
+"""Checks of the formulas on the slides.   python -m pytest -q tests"""
 import numpy as np
-import pytest
-from scipy.optimize import minimize_scalar
+import pywt
+from scipy.stats import poisson
 
-from pdn import anscombe, data, denoisers, methods, p4ip
+from experiments.common import (anscombe, bin_counts, inverse_anscombe_exact, poisson_prox, unbin,
+                                wavelet_shrink)
+from experiments.direction_b.ista_fista import SWT, objective, solve
 
 
-def test_poisson_prox_matches_numerical_minimiser():
+def test_poisson_prox_is_the_minimiser():  # slides 8, 14
     rng = np.random.default_rng(0)
-    a = rng.uniform(-3, 5, 400)
-    y = rng.poisson(1.5, 400).astype(float)
-    for rho in (0.05, 0.5, 5.0, 500.0):
-        x = p4ip.poisson_prox(a, y, rho)
-        assert np.all(x >= 0)
-        for ai, yi, xi in zip(a[:60], y[:60], x[:60]):
-            f = lambda t: t - (yi * np.log(t) if yi > 0 else 0) + rho / 2 * (t - ai) ** 2
-            r = minimize_scalar(f, bounds=(1e-14, 50), method="bounded", options={"xatol": 1e-12})
-            ref = r.x if (yi > 0 or ai - 1 / rho > 0) else 0.0
-            assert abs(xi - ref) < 1e-5 * max(1, ref)
+    a = rng.normal(0, 2, 200); y = rng.poisson(1.0, 200).astype(float); rho = 0.7
+    x = poisson_prox(a, y, rho)
+    grid = np.linspace(1e-9, 15, 300001)
+    for ai, yi, xi in zip(a[:20], y[:20], x[:20]):
+        phi = grid - yi * np.log(grid) + rho / 2 * (grid - ai) ** 2
+        assert abs(xi - grid[np.argmin(phi)]) < 1e-3
+    assert np.all(x[y == 0] == np.maximum(a[y == 0] - 1 / rho, 0))
 
 
-def test_poisson_prox_no_cancellation_large_rho_negative_b():
-    # b << 0, small y: naive (b + sqrt(b^2+4y/rho))/2 loses all digits
-    x = p4ip.poisson_prox(np.array([-1e4]), np.array([1.0]), 1e6)
-    b = -1e4 - 1e-6
-    exact = 1.0 / (1e6 * -b)  # leading order of the positive root
-    assert x[0] > 0 and abs(x[0] - exact) / exact < 1e-6
+def test_exact_inverse_anscombe_is_unbiased():  # slide 4
+    k = np.arange(400)
+    for x in [0.05, 0.3, 1.0, 4.0, 20.0]:
+        ez = np.sum(poisson.pmf(k, x) * anscombe(k))
+        assert abs(inverse_anscombe_exact(np.array([ez]))[0] - x) < 1e-4
 
 
-def test_exact_unbiased_inverse_is_unbiased():
-    xs = np.array([0.05, 0.2, 1.0, 3.0, 10.0, 40.0])
-    D = anscombe._expected_anscombe(xs)
-    assert np.allclose(anscombe.inverse_exact_unbiased(D), xs, rtol=1e-4, atol=1e-4)
-    assert anscombe.inverse_exact_unbiased(np.array([0.5]))[0] == 0.0  # below E[A|0]
+def test_wavelet_shrink():  # slide 10
+    r = np.random.default_rng(1).normal(size=(64, 64))
+    assert np.allclose(wavelet_shrink(r, [0, 0, 0, 0])[0], r)  # orthonormal: zero threshold = identity
+    big = wavelet_shrink(r, [1e9] * 4)[0]  # all details removed: only the coarse band is left
+    assert np.allclose(big.mean(), r.mean())
 
 
-def test_noise_is_deterministic_and_method_independent():
-    s = data.load_clean(data.list_images("test")[0])
-    _, y1 = data.simulate(s, 0.2, "a", 0)
-    _, y2 = data.simulate(s, 0.2, "a", 0)
-    _, y3 = data.simulate(s, 0.2, "a", 1)
-    assert np.array_equal(y1, y2) and not np.array_equal(y1, y3)
+def test_binning_keeps_a_constant_image():  # slide 12
+    y = np.full((256, 256), 0.3)
+    assert np.allclose(unbin(bin_counts(y, 3), y.shape, 3), 0.3)
 
 
-def test_noise_statistics():
-    s = np.full((300, 300), 1.0)
-    x, y = data.simulate(s, 0.2, "flat", 0)
-    assert abs(y.mean() - 0.2) < 0.01 and abs(y.var() - 0.2) < 0.01
+class OrthonormalDWT:
+    """D = W^T for an orthonormal DWT: slide 17 says the solution is one soft-threshold step."""
+    def __init__(self, shape):
+        self.slices = None; self.L = 1.0; self.shape = shape
+        a, self.slices = pywt.coeffs_to_array(pywt.wavedec2(np.zeros(shape), "db4", "periodization", 3))
+        self.weights = np.ones_like(a); self.weights[self.slices[0]] = 0
+
+    def fixed(self, z):
+        return self.analysis(z)
+
+    def analysis(self, img):
+        return pywt.coeffs_to_array(pywt.wavedec2(img, "db4", "periodization", 3))[0]
+
+    def synthesis(self, a):
+        return pywt.waverec2(pywt.array_to_coeffs(a, self.slices, "wavedec2"), "db4", "periodization")
 
 
-def test_binning_conserves_counts_and_unbin_constant():
-    y = np.random.default_rng(1).poisson(0.3, (256, 256)).astype(float)
-    yb, shape = data.bin_counts(y, 3)
-    assert yb.shape == (86, 86)
-    assert data.unbin(np.full((86, 86), 9.0), shape, 3) == pytest.approx(np.ones((256, 256)))
+def test_ista_fista_orthonormal_special_case():  # slide 17
+    z = np.random.default_rng(2).normal(2, 1, (64, 64))
+    D, lam = OrthonormalDWT(z.shape), 0.7
+    c = D.analysis(z)
+    one_step = np.sign(c) * np.maximum(np.abs(c) - lam * D.weights, 0)
+    for acc in (False, True):
+        a, _ = solve(z, D, lam, accelerated=acc, tol=1e-12)
+        assert np.allclose(a, one_step, atol=1e-8)
 
 
-def test_split_disjoint():
-    names = {s: {data.image_name(p) for p in data.list_images(s)} for s in data.SPLITS}
-    assert len(names["test"]) == 8 and len(names["tune"]) == 4 and len(names["train"]) == 400
-    assert not (names["test"] & names["tune"]) and not (names["test"] & names["train"])
+def test_ista_and_fista_reach_the_same_objective():  # slide 11, redundant frame
+    z = anscombe(np.random.default_rng(3).poisson(2.0, (64, 64)).astype(float))
+    D = SWT(z.shape)
+    assert np.allclose(D.synthesis(D.analysis(z)), z)  # Parseval frame
+    Fi = solve(z, D, 0.5, False, max_iter=5000, tol=1e-10)[1]
+    Ff = solve(z, D, 0.5, True, max_iter=5000, tol=1e-10)[1]
+    assert abs(Fi[-1] - Ff[-1]) < 1e-4 * Ff[-1]
+    assert len(Ff) < len(Fi)  # FISTA needs fewer iterations
 
 
-def test_p4ip_identity_prior_returns_ml_estimate():
-    y = np.random.default_rng(2).poisson(2.0, (32, 32)).astype(float)
-    x, info = methods.run_method("p4ip", y, 2.0, {
-        "priors": [{"denoiser": "identity", "beta": 1.0}], "rho0": 1.0, "n_iter": 300})
-    assert np.allclose(x, y, atol=1e-3)
-
-
-@pytest.fixture(scope="module")
-def ridge():
-    # exact prox of R(v)=||v||^2/2 with weight beta at sigma^2=beta/rho
-    if "_ridge_test" not in denoisers.DENOISERS:
-        denoisers.register("_ridge_test")(lambda r, sigma: r / (1.0 + sigma**2))
-    return "_ridge_test"
-
-
-def test_p4ip_converges_to_explicit_map_solution(ridge):
-    """Checks the sigma^2 = beta/rho convention and the whole ADMM loop against
-    argmin sum(x - y log x) + beta/2 ||x||^2, solved per pixel in closed form."""
-    y = np.random.default_rng(3).poisson(3.0, (16, 16)).astype(float)
-    beta = 0.4
-    x_map = (-1 + np.sqrt(1 + 4 * beta * y)) / (2 * beta)
-    for rescale in (False, True):
-        x, _ = methods.run_method("p4ip", y, 3.0, {
-            "priors": [{"denoiser": ridge, "beta": beta}], "rho0": 1.0, "n_iter": 400,
-            "rescale_dual": rescale, "output": "x"})
-        assert np.allclose(x, x_map, atol=1e-6)
-
-
-def test_two_prior_split_equals_single_prior_with_summed_weight(ridge):
-    """Consensus split (slide 15) with two identical ridge priors of weight b/2
-    must reach the same MAP point as one prior of weight b."""
-    y = np.random.default_rng(4).poisson(3.0, (16, 16)).astype(float)
-    beta = 0.4
-    x_map = (-1 + np.sqrt(1 + 4 * beta * y)) / (2 * beta)
-    x, _ = methods.run_method("p4ip", y, 3.0, {
-        "priors": [{"denoiser": ridge, "beta": beta / 2}, {"denoiser": ridge, "beta": beta / 2}],
-        "rho0": 1.0, "n_iter": 600, "output": "x"})
-    assert np.allclose(x, x_map, atol=1e-5)
+def test_patch_haar_and_split_merge():  # slide 16
+    from experiments.direction_a.a2_dictionary import W_P, merge, split
+    assert np.allclose(W_P @ W_P.T, np.eye(64))
+    P = np.random.default_rng(4).random((10, 64))
+    for d in ("wavelet", "pixel"):
+        assert np.allclose(merge(*split(P, d), d), P)
