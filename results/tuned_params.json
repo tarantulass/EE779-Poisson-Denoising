@@ -2,48 +2,42 @@
  "mean_filter": {
   "0.1": {
    "params": {
-    "size": 11
+    "size": 31
    },
-   "tune_psnr": 13.76502831873756,
+   "tune_psnr": 17.821712533156493,
    "at_grid_edge": [
     "size"
    ]
   },
   "0.2": {
    "params": {
-    "size": 11
+    "size": 31
    },
-   "tune_psnr": 16.124147606837216,
+   "tune_psnr": 18.79679550596387,
    "at_grid_edge": [
     "size"
    ]
   },
   "0.5": {
    "params": {
-    "size": 11
+    "size": 21
    },
-   "tune_psnr": 18.70278095294468,
-   "at_grid_edge": [
-    "size"
-   ]
+   "tune_psnr": 19.529413521240443,
+   "at_grid_edge": []
   },
   "1.0": {
    "params": {
-    "size": 11
+    "size": 15
    },
-   "tune_psnr": 20.10913891904531,
-   "at_grid_edge": [
-    "size"
-   ]
+   "tune_psnr": 20.31328936106515,
+   "at_grid_edge": []
   },
   "2.0": {
    "params": {
     "size": 11
    },
    "tune_psnr": 21.08429512238984,
-   "at_grid_edge": [
-    "size"
-   ]
+   "at_grid_edge": []
   },
   "4.0": {
    "params": {
@@ -56,39 +50,33 @@
  "gaussian_filter": {
   "0.1": {
    "params": {
-    "sigma": 4
+    "sigma": 12
    },
-   "tune_psnr": 15.499135743738659,
+   "tune_psnr": 18.370092073924425,
    "at_grid_edge": [
     "sigma"
    ]
   },
   "0.2": {
    "params": {
-    "sigma": 4
+    "sigma": 8
    },
-   "tune_psnr": 17.597939875365807,
-   "at_grid_edge": [
-    "sigma"
-   ]
+   "tune_psnr": 19.223189188370284,
+   "at_grid_edge": []
   },
   "0.5": {
    "params": {
-    "sigma": 4
+    "sigma": 6
    },
-   "tune_psnr": 19.695281936353986,
-   "at_grid_edge": [
-    "sigma"
-   ]
+   "tune_psnr": 19.988067561386245,
+   "at_grid_edge": []
   },
   "1.0": {
    "params": {
     "sigma": 4
    },
    "tune_psnr": 20.797850239389376,
-   "at_grid_edge": [
-    "sigma"
-   ]
+   "at_grid_edge": []
   },
   "2.0": {
    "params": {
@@ -122,77 +110,61 @@
   },
   "0.5": {
    "params": {
-    "size": 9
+    "size": 13
    },
-   "tune_psnr": 6.653580094828088,
-   "at_grid_edge": [
-    "size"
-   ]
+   "tune_psnr": 6.660923179634663,
+   "at_grid_edge": []
   },
   "1.0": {
    "params": {
-    "size": 9
+    "size": 13
    },
-   "tune_psnr": 7.619595103266246,
-   "at_grid_edge": [
-    "size"
-   ]
+   "tune_psnr": 7.644687748848939,
+   "at_grid_edge": []
   },
   "2.0": {
    "params": {
-    "size": 9
+    "size": 17
    },
-   "tune_psnr": 13.81550011633237,
-   "at_grid_edge": [
-    "size"
-   ]
+   "tune_psnr": 14.065718160381042,
+   "at_grid_edge": []
   },
   "4.0": {
    "params": {
     "size": 9
    },
    "tune_psnr": 18.447029009553436,
-   "at_grid_edge": [
-    "size"
-   ]
+   "at_grid_edge": []
   }
  },
  "wiener_filter": {
   "0.1": {
    "params": {
-    "size": 9
+    "size": 17
    },
-   "tune_psnr": 11.819577116800017,
-   "at_grid_edge": [
-    "size"
-   ]
+   "tune_psnr": 13.518359460607453,
+   "at_grid_edge": []
   },
   "0.2": {
    "params": {
-    "size": 9
+    "size": 13
    },
-   "tune_psnr": 13.793601281893533,
-   "at_grid_edge": [
-    "size"
-   ]
+   "tune_psnr": 14.504393462305261,
+   "at_grid_edge": []
   },
   "0.5": {
    "params": {
     "size": 9
    },
    "tune_psnr": 15.940489078443724,
-   "at_grid_edge": [
-    "size"
-   ]
+   "at_grid_edge": []
   },
   "1.0": {
    "params": {
     "size": 9
    },
    "tune_psnr": 17.61102913060262,
-   "at_grid_edge": [
-    "size"
-   ]
+   "at_grid_edge": []
   },
   "2.0": {
    "params": {
@@ -662,6 +634,146 @@
    "at_grid_edge": [
     "K"
    ]
+  },
+  "0.2": {
+   "params": {
+    "patch": 16,
+    "K": 1
+   },
+   "tune_psnr": 18.978215219912403,
+   "at_grid_edge": [
+    "K"
+   ]
+  },
+  "0.5": {
+   "params": {
+    "patch": 16,
+    "K": 2
+   },
+   "tune_psnr": 20.103245398924976,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {
+    "patch": 16,
+    "K": 2
+   },
+   "tune_psnr": 21.05623236533439,
+   "at_grid_edge": []
+  },
+  "2.0": {
+   "params": {
+    "patch": 16,
+    "K": 4
+   },
+   "tune_psnr": 21.882581282720103,
+   "at_grid_edge": [
+    "K"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "patch": 16,
+    "K": 4
+   },
+   "tune_psnr": 22.655029242851743,
+   "at_grid_edge": [
+    "K"
+   ]
+  }
+ },
+ "B_fista_dict": {
+  "0.1": {
+   "params": {
+    "lam": 1
+   },
+   "tune_psnr": 7.571801430054369,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "lam": 1
+   },
+   "tune_psnr": 10.293891721577804,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "lam": 2
+   },
+   "tune_psnr": 14.16893501448843,
+   "at_grid_edge": []
+  },
+  "1.0": {
+   "params": {
+    "lam": 2
+   },
+   "tune_psnr": 16.93405056167806,
+   "at_grid_edge": []
+  },
+  "2.0": {
+   "params": {
+    "lam": 2
+   },
+   "tune_psnr": 18.56645188076577,
+   "at_grid_edge": []
+  },
+  "4.0": {
+   "params": {
+    "lam": 2
+   },
+   "tune_psnr": 19.967493285413163,
+   "at_grid_edge": []
+  }
+ },
+ "B_ista_dict": {
+  "0.1": {
+   "params": {
+    "lam": 1
+   },
+   "tune_psnr": 7.571801430054369,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_dict"
+  },
+  "0.2": {
+   "params": {
+    "lam": 1
+   },
+   "tune_psnr": 10.293891721577804,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_dict"
+  },
+  "0.5": {
+   "params": {
+    "lam": 2
+   },
+   "tune_psnr": 14.16893501448843,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_dict"
+  },
+  "1.0": {
+   "params": {
+    "lam": 2
+   },
+   "tune_psnr": 16.93405056167806,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_dict"
+  },
+  "2.0": {
+   "params": {
+    "lam": 2
+   },
+   "tune_psnr": 18.56645188076577,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_dict"
+  },
+  "4.0": {
+   "params": {
+    "lam": 2
+   },
+   "tune_psnr": 19.967493285413163,
+   "at_grid_edge": [],
+   "note": "same parameters as B_fista_dict"
   }
  }
 }
