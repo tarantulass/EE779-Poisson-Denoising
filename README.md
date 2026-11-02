@@ -89,6 +89,15 @@ inside `tmux`).
   because a large lam needs a small tau to stay stable.
 * Direction B: the coarse band (wavelet) and the constant atoms (dictionary) are fixed to the
   coarse part of z rather than penalised; see the docstring of `ista_fista.py`.
+  Without binning, the tuned lam sets every detail coefficient to zero at most peaks (the best
+  estimate is the smooth coarse part), so the ISTA vs FISTA convergence plot uses the 3x3-binned
+  counts, where the sparse codes are not trivial.
+* P4IP-type grids (P4IP-BM3D, A2): a first 3x3 grid (s in 0.5, 1, 2; r in 1, 4, 16) on the binned
+  data always picked s = 1 and the smallest r, so the final grid is s = 1, r in (0.25, 0.5, 1, 2).
+  Each P4IP run calls its denoiser 70 times, which is why the grid is kept small. A3 grids lam2
+  with c in (0.25, 0.5, 1).
+* `output/EE779_results.pptx` is the results deck, built from `results/` (every number in it is
+  read from `results/test.csv` and `results/test_bin3.csv`).
 
 # LLM usage
 AI assistant: Claude (Anthropic), used through Claude Code. Commits it co-wrote carry a

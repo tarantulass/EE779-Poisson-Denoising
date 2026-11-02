@@ -136,8 +136,11 @@ def sparse_anscombe(y, lam, solver="fista", frame="swt", max_iter=2000, tol=1e-7
         "sparsity": float(np.count_nonzero(a) / a.size)}
 
 
-def convergence_plot(peaks=(0.2, 1, 4), image="cameraman", n_star=5000):
-    """F(alpha_k) - F* for ISTA and FISTA (same objective, same lam), F* from a long FISTA run."""
+def convergence_plot(peaks=(0.5, 1, 4), image="cameraman", n_star=5000, b=3):
+    """F(alpha_k) - F* for ISTA and FISTA (same objective, same lam), F* from a long FISTA run.
+
+    Uses the 3x3-binned counts and their tuned lam: without binning the tuned lam sets every detail
+    coefficient to zero at most peaks (alpha = 0 after one step), so there is nothing to compare."""
     import json
     import os
 
@@ -145,14 +148,17 @@ def convergence_plot(peaks=(0.2, 1, 4), image="cameraman", n_star=5000):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    from ..common import REPO, image_paths, load_image, noisy_image
+    from ..common import REPO, bin_counts, image_paths, load_image, noisy_image
     tuned = json.load(open(os.path.join(REPO, "results", "tuned_params.json")))
     path = [p for p in image_paths("test") if image in p][0]
     fig, axes = plt.subplots(2, len(peaks), figsize=(4 * len(peaks), 7), squeeze=False)
     for row, frame in enumerate(("swt", "dict")):
         for col, peak in enumerate(peaks):
-            lam = tuned[f"B_fista_{frame}"][str(peak)]["lam"]
+            key = f"B_fista_{frame}@bin{b}" if b else f"B_fista_{frame}"
+            lam = tuned[key][str(float(peak))]["params"]["lam"]
             _, y = noisy_image(load_image(path), peak, image)
+            if b:
+                y = bin_counts(y, b)
             z = anscombe(y)
             D = make_operator(frame, y.shape)
             r = z - D.lowpass(z)
@@ -161,7 +167,7 @@ def convergence_plot(peaks=(0.2, 1, 4), image="cameraman", n_star=5000):
             for acc, name in ((False, "ISTA"), (True, "FISTA")):
                 F = np.array(solve(r, D, lam, acc, max_iter=1000, tol=0)[1])
                 ax.loglog(np.arange(len(F)) + 1, np.maximum(F - F_star, 1e-12) / F_star, label=name)
-            ax.set_title(f"{frame}, peak {peak}, lam {lam:g}")
+            ax.set_title(f"{frame}, peak {peak}, {b}x{b} binned, lam {lam:g}" if b else f"{frame}, peak {peak}, lam {lam:g}")
             ax.set_xlabel("iteration k"); ax.set_ylabel("(F_k - F*) / F*"); ax.grid(alpha=0.3); ax.legend()
     fig.tight_layout()
     out = os.path.join(REPO, "results", "ista_fista_convergence.png")

@@ -36,8 +36,9 @@ def none(peak, tuned):
 
 
 def p4ip_sigma_grid(peak, tuned):
-    return [{"lam": float((s * np.sqrt(peak)) ** 2 * r / peak), "rho0": float(r / peak)}
-            for s in (0.5, 1, 2) for r in (1, 4, 16)]
+    # A first 3x3 grid s in (0.5, 1, 2) x r in (1, 4, 16) on the binned data always chose s = 1 and
+    # the smallest r, so the grid is s = 1 with smaller r. Each run costs 70 denoiser calls.
+    return [{"lam": float(r), "rho0": float(r / peak)} for r in (0.25, 0.5, 1, 2)]
 
 
 def wavelet_grid(peak, tuned):
@@ -49,7 +50,7 @@ def consensus_grid(peak, tuned):
     """BM3D weight and rho0 from the tuned P4IP-BM3D; grid the wavelet weight lam2 (slide 15)."""
     b = tuned["p4ip_bm3d"]
     return [{"lam1": b["lam"], "rho0": b["rho0"], "lam2": float(c * np.sqrt(peak) * b["rho0"])}
-            for c in (0.125, 0.25, 0.5, 1, 2)]
+            for c in (0.25, 0.5, 1)]
 
 
 def sparse_grid(peak, tuned):
