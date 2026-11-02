@@ -41,6 +41,12 @@ def p4ip_sigma_grid(peak, tuned):
     return [{"lam": float(r), "rho0": float(r / peak)} for r in (0.25, 0.5, 1, 2)]
 
 
+def dict_sigma_grid(peak, tuned):
+    # The A2 dictionary priors chose the smallest r of p4ip_sigma_grid from peak 0.5 up (3x3 binned),
+    # so their grid extends to smaller r.
+    return [{"lam": float(r), "rho0": float(r / peak)} for r in (0.0625, 0.125, 0.25, 0.5, 1)]
+
+
 def wavelet_grid(peak, tuned):
     return [{"lam": float(c * np.sqrt(peak) * r / peak), "rho0": float(r / peak)}
             for c in (0.25, 0.5, 1, 2, 4) for r in (0.25, 1, 4, 16, 64)]
@@ -81,8 +87,8 @@ BASELINES = {
 DIRECTION_A = {
     "A1_wavelet":       (p4ip_wavelet, {}, wavelet_grid),
     "A1_subband":       (p4ip_wavelet, {}, None),  # A1's best, then per-level weights (see REFINE)
-    "A2_wavelet_dict":  (p4ip_dictionary, {"domain": "wavelet"}, p4ip_sigma_grid),
-    "A2_pixel_dict":    (p4ip_dictionary, {"domain": "pixel"}, p4ip_sigma_grid),
+    "A2_wavelet_dict":  (p4ip_dictionary, {"domain": "wavelet"}, dict_sigma_grid),
+    "A2_pixel_dict":    (p4ip_dictionary, {"domain": "pixel"}, dict_sigma_grid),
     "A3_bm3d_wavelet":  (p4ip_bm3d_wavelet, {}, consensus_grid),
 }
 
