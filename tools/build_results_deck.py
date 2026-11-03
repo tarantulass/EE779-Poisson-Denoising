@@ -285,6 +285,32 @@ text(s, "Same peaks and PSNR definition as the paper; different images and our o
 text(s, "Source: Rond, Giryes, Elad, arXiv:1511.02500 v1, Table 1 (no binning). Tuning-image values: results/tuned_params.json.",
      0.5, 4.73, 9.0, 0.33, 9)
 
+# ------------------------------------------------------------------ 4b. per-image replication on the shared images
+s = new_slide("Replication on the images shared with the paper", PAPER_REF)
+PAPER_IMG = {  # Rond, Giryes, Elad, arXiv:1511.02500 v1, Table 1 (no binning), peaks 0.1 ... 4
+    ("cameraman", "anscombe_bm3d"): [15.66, 17.35, 18.83, 20.37, 22.13, 23.94],
+    ("cameraman", "p4ip_bm3d"): [16.88, 17.82, 19.27, 20.54, 21.87, 23.29],
+    ("house", "anscombe_bm3d"): [16.28, 18.37, 20.27, 22.35, 24.18, 26.04],
+    ("house", "p4ip_bm3d"): [18.30, 19.48, 20.93, 22.67, 24.65, 26.33],
+    ("peppers", "anscombe_bm3d"): [15.61, 17.10, 18.49, 19.89, 21.97, 24.07],
+    ("peppers", "p4ip_bm3d"): [16.28, 17.31, 18.86, 20.07, 21.33, 23.88],
+}
+rows = [["Paper / ours (dB)", *[f"peak {p}" for p in PL]]]
+diffs = {"anscombe_bm3d": [], "p4ip_bm3d": []}
+for (im, m), pv in PAPER_IMG.items():
+    o = T0[(T0.image == im) & (T0.method == m)].set_index("peak").psnr
+    short = "Anscombe + BM3D" if m == "anscombe_bm3d" else "P4IP + BM3D"
+    rows.append([f"{im.capitalize()}, {short}", *[f"{v:.2f} / {f2(o.get(p))}" for p, v in zip(PEAKS, pv)]])
+    diffs[m].append([o.get(p) - v for p, v in zip(PEAKS, pv)])
+table(s, rows, 0.5, 1.05, 9.0, [2.7] + [1.05] * 6, size=10, row_h=0.3)
+dm = {m: np.nanmean(np.array(v), axis=0) for m, v in diffs.items()}
+text(s, [f"Ours minus paper, mean over the 3 images: P4IP + BM3D {', '.join(f'{x:+.2f}' for x in dm['p4ip_bm3d'])} dB; "
+         f"Anscombe + BM3D {', '.join(f'{x:+.2f}' for x in dm['anscombe_bm3d'])} dB (peaks 0.1 to 4).",
+         "From peak 0.2 up our P4IP + BM3D is within about 0.3 dB of the paper on the same images. The largest gaps are at peak 0.1, "
+         "where counts are fewest; both studies use their own noise draws, which cannot be matched."],
+     0.5, 3.45, 9.0, 1.3, 11, gap=6)
+text(s, "Cameraman, House and Peppers are in both test sets. Paper: Table 1 of arXiv:1511.02500 v1; ours: results/test.csv.", 0.5, 4.95, 9.0, 0.25, 9)
+
 # ------------------------------------------------------------------ 5. main chart
 s = new_slide("PSNR vs peak on the test images, no binning")
 line_chart(s, P0, ["anscombe_bm3d", "p4ip_bm3d", "spda", "A1_subband", "A3_bm3d_wavelet", "A2_wavelet_dict",
