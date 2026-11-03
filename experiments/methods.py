@@ -55,7 +55,7 @@ def consensus_grid(peak, tuned):
     """BM3D weight and rho0 from the tuned P4IP-BM3D; grid the wavelet weight lam2 (slide 15)."""
     b = tuned["p4ip_bm3d"]
     return [{"lam1": b["lam"], "rho0": b["rho0"], "lam2": float(c * np.sqrt(peak) * b["rho0"])}
-            for c in (0.25, 0.5, 1)]
+            for c in (0.125, 0.25, 0.5, 1, 2, 4)]
 
 
 def sparse_grid(peak, tuned):
