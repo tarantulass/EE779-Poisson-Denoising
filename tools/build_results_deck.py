@@ -228,73 +228,159 @@ def notes(s, t):
 
 PAPER_REF = "[1]"
 
-# ------------------------------------------------------------------ 1. title (layout of the template's slide 1)
+
+# ==================================================================================== DECK v3
+# Order follows the grading rubric: goals and problem -> existing methods and their failures ->
+# reference method -> replication (with changes) -> real data (FMD) -> proposed directions with
+# reasons -> findings, conclusions, future work. Backup slides at the end. Speaker notes carry the
+# timing and a transition sentence for every slide.
+import os
+
+REFS = {"p4ip": "[1]", "bm3d": "[2]", "spda": "[3]", "ans": "[4]", "fista": "[5]", "fmd": "[6]"}
+
+
+def bullets(s, items, x=0.5, y=1.13, w=9.0, h=3.9, size=14, gap=9):
+    return text(s, items, x, y, w, h, size, gap=gap)
+
+
+def say(s, minutes, body, nxt):
+    notes(s, f"Suggested time: {minutes}.\n\n{body}\n\nTransition: {nxt}")
+
+
+# ---------------------------------------------------------------- 1. title
 s = new_slide(None, "")
 text(s, "EE779 Project", 0.38, 0.27, 8.87, 0.35, 14, bold=True)
 text(s, "Poisson denoising", 0.38, 0.69, 9.0, 0.53, 21, bold=True)
-text(s, "Results: baselines, replication and proposed directions", 0.35, 1.28, 8.87, 0.45, 17)
+text(s, "Plug-and-play priors and sparse representations: replication and extensions", 0.35, 1.28, 8.87, 0.45, 17)
 text(s, [[("Members", True)], "1.  Jeet Kattirsitti", "2.  Rajwardhan Toraskar"], 0.38, 1.91, 4.0, 0.85, 14)
-for i, t in enumerate(["Setup and replication of the P4IP paper",
-                       "Baselines and the proposed directions A and B",
-                       "Binning, statistical tests and conclusions"]):
+for i, t in enumerate(["Problem, existing methods and the P4IP solution",
+                       "Replication of P4IP on synthetic and real (FMD) data",
+                       "Proposed directions A (new priors) and B (ISTA/FISTA), findings"]):
     text(s, t, 0.5, 3.17 + 0.5 * i, 9.0, 0.48, 15)
-notes(s, "Results of the experiments proposed in the EE779 deck. Every number on the following slides is read from the "
-         "result logs of our code (results/test.csv, results/test_bin3.csv, results/tuned_params.json).")
+say(s, "20 seconds", "We study denoising of images formed from very few photons. We reproduce the P4IP paper, test it on real "
+    "microscopy data, and evaluate two directions we proposed: new priors inside P4IP, and an explicit sparse model solved with ISTA and FISTA.",
+    "First, why low-photon imaging matters and what exactly we set out to do.")
 
-# ------------------------------------------------------------------ 2. setup
-s = new_slide("Experimental setup")
-text(s, [
-    "x = p s,   max(s) = 1,   yᵢ ∼ Poisson(xᵢ),   p ∈ {0.1, 0.2, 0.5, 1, 2, 4}",
-    "Test: 8 images, one noise draw per image and peak. The seed depends only on (image, peak), so every method sees the same counts.",
-    "Tuning: every free parameter is chosen per peak on 4 separate tuning images. 400 training images for the A2 dictionaries.",
-    "Binning: 3×3 block sums, denoise, interpolate back. Tuned and reported separately.",
-    "Measured: PSNR = 10 log₁₀(p² / MSE) as in the papers, SSIM, runtime, sparsity, convergence residuals.",
-    "Comparison: paired Wilcoxon signed-rank test against Anscombe + BM3D over the 8 test images.",
-], 0.5, 1.13, 9.0, 3.9, 14, gap=9)
+# ---------------------------------------------------------------- 2. motivation and goals
+s = new_slide("Motivation and project goals")
+text(s, [[("Where photons are scarce", True)],
+         "Fluorescence microscopy (low dose to protect live cells), astronomy, low-dose medical imaging (PET, CT), night and high-speed photography.",
+         "Each pixel counts a few photons; at peak 0.1 about 90% of pixels read zero."], 0.5, 1.13, 9.0, 1.5, 14, gap=6)
+text(s, [[("Goals", True)],
+         "1.  Reproduce the P4IP results (Rond, Giryes, Elad) against Anscombe + BM3D and SPDA.",
+         "2.  Check the reproduction on real data: the FMD fluorescence-microscopy benchmark.",
+         "3.  Direction A: change the P4IP prior (wavelets, learned dictionaries, multiple priors).",
+         "4.  Direction B: an explicit sparse model solved with ISTA vs FISTA.",
+         "5.  Evaluate all of it with one protocol: same images, same noise, separate tuning, paired tests."],
+     0.5, 2.75, 9.0, 2.3, 14, gap=5)
+say(s, "45 seconds", "Applications first, then our five goals. Goals 1 and 2 are the reproduction, 3 and 4 are our own proposals, 5 is how we keep the comparison fair.",
+    "To see why this is hard, look at the noise model itself.")
 
-# ------------------------------------------------------------------ 3. methods
-s = new_slide("Methods implemented")
-table(s, [["Group", "Method", "Slide", "Module"],
-          ["Conventional", "Mean, Gaussian, median, Wiener, wavelet threshold, NL-means, Poisson-TV", "3", "baselines/conventional.py"],
-          ["Baselines", "Anscombe + BM3D, exact and algebraic inverse", "4, 5", "baselines/anscombe_bm3d.py"],
-          ["", "P4IP + BM3D (Plug-and-Play ADMM, 70 iterations)", "7, 8", "baselines/p4ip.py"],
-          ["", "SPDA (exp(Dα), shared supports, simplified)", "6", "baselines/spda.py"],
-          ["Direction A", "A1 wavelet shrinkage prior, one or per-level thresholds", "10", "direction_a/a1_wavelet.py"],
-          ["", "A2 learned wavelet-patch vs pixel dictionary, 256 atoms each", "10", "direction_a/a2_dictionary.py"],
-          ["", "A3 BM3D + wavelet consensus (multiple priors)", "10", "direction_a/a3_consensus.py"],
-          ["Direction B", "ISTA vs FISTA on ½‖Dα − z‖² + λ‖α‖₁, D = redundant wavelet or learned dictionary", "11", "direction_b/ista_fista.py"]],
-      0.5, 1.13, 9.0, [1.2, 4.75, 0.6, 2.45], size=10.5, row_h=0.36, right_from=99)
-text(s, "All modules are in experiments/ of the repository.", 0.5, 4.73, 9.0, 0.33, 11)
+# ---------------------------------------------------------------- 3. problem statement
+s = new_slide("Problem statement: Poisson noise", REFS["p4ip"])
+text(s, ["yᵢ ∼ Poisson(xᵢ),     P(yᵢ = k | xᵢ) = exp(−xᵢ) xᵢᵏ / k!",
+         "E[yᵢ | xᵢ] = Var(yᵢ | xᵢ) = xᵢ,     SNRᵢ = √xᵢ",
+         "Peak convention: x = p s, max(s) = 1, p = max(x) ∈ {0.1, 0.2, 0.5, 1, 2, 4}"], 0.5, 1.13, 9.0, 1.3, 15, gap=8)
+text(s, [[("Task: ", True), ("recover x from one noisy count image y.", False)],
+         [("Why it is hard: ", True), ("the noise depends on the signal (variance = mean), the data are integers with mostly zeros, "
+          "and at p = 0.1, P(yᵢ = 0) = e⁻⁰·¹ ≈ 0.905. Gaussian-noise denoisers assume none of this.", False)]],
+     0.5, 2.75, 9.0, 1.8, 14, gap=9)
+say(s, "50 seconds", "Mean equals variance, so bright pixels are noisier in absolute terms but cleaner in relative terms. The peak p sets the difficulty; we use the paper's six peaks.",
+    "Existing methods handle this in two ways; let us see where each one fails.")
 
-# ------------------------------------------------------------------ 4. replication
-s = new_slide("Replication of the P4IP paper, Table 1", PAPER_REF)
+# ---------------------------------------------------------------- 4. existing methods (1)
+s = new_slide("Existing methods and where they fail (1)", REFS["ans"])
+table(s, [["Method", "Idea", "Failure at low counts (our measurement)"],
+          ["Mean / Gaussian / median / Wiener", "Local smoothing", f"Blur edges; median = 0 when most counts are 0 ({P0.loc['median_filter', 0.1]:.2f} dB at p = 0.1)"],
+          ["Wavelet thresholding, NL-means", "Sparse transform / similar patches", "Thresholds and patch matching assume Gaussian noise"],
+          ["Poisson-TV", "Exact Poisson likelihood + TV", "Staircasing; flat texture"],
+          ["Anscombe + Gaussian denoiser", "z = 2√(y + 3/8) has variance ≈ 1", "Only for large counts; algebraic inverse is biased"]],
+      0.5, 1.13, 9.0, [2.6, 2.5, 3.9], size=10.5, row_h=0.42, right_from=99)
+gap = [P0.loc["anscombe_bm3d", p] - P0.loc["anscombe_bm3d_algebraic", p] for p in PEAKS]
+text(s, f"Measured: with the same BM3D output, the algebraic inverse loses {min(gap):.1f} to {max(gap):.1f} dB against the exact unbiased inverse "
+        f"(Mäkitalo and Foi). Even with the exact inverse, Anscombe + BM3D is beaten by a tuned Gaussian filter at p = 0.1 "
+        f"({P0.loc['anscombe_bm3d', 0.1]:.2f} vs {P0.loc['gaussian_filter', 0.1]:.2f} dB).", 0.5, 3.6, 9.0, 1.1, 12)
+say(s, "60 seconds", "Conventional filters assume Gaussian noise. The variance-stabilising route is the standard fix, but the stabilisation is only approximate at low counts. Our own runs show both failures.",
+    "The two strongest classical baselines, BM3D and SPDA, have their own limits.")
+
+# ---------------------------------------------------------------- 5. existing methods (2)
+s = new_slide("Existing methods and where they fail (2)", REFS["bm3d"] + " " + REFS["spda"])
+text(s, [[("BM3D (Dabov et al.)", True)],
+         "Groups similar patches, 3-D transform, threshold, Wiener refinement. State of the art for Gaussian noise.",
+         "Fails at low counts: patches are mostly zeros, so block matching finds wrong 'similar' patches; it needs the Anscombe step and inherits its bias.",
+         [("SPDA (Giryes and Elad)", True)],
+         "Patch model exp(Dα) with shared sparse supports; uses the Poisson likelihood directly.",
+         "Fails in practice: dictionary learning and greedy pursuit take about 10 hours per image without binning (reported in [1]); the model is tied to one prior."],
+     0.5, 1.13, 9.0, 3.3, 13, gap=6)
+text(s, "Gap: a method with the exact Poisson likelihood that can still use the best available image prior, at a practical cost.",
+     0.5, 4.5, 9.0, 0.5, 13, bold=True)
+say(s, "50 seconds", "BM3D has the best prior but the wrong noise model; SPDA has the right noise model but an expensive, fixed prior.",
+    "P4IP is designed to get both at once.")
+
+# ---------------------------------------------------------------- 6. P4IP formulation
+s = new_slide("Reference method: P4IP (Plug-and-Play for Poisson)", REFS["p4ip"])
+text(s, ["minₓ≥₀  f(x) + λR(x),     f(x) = ∑ᵢ (xᵢ − yᵢ log xᵢ)   (exact Poisson negative log-likelihood)",
+         "Split:  minₓ,ᵥ  f(x) + λR(v)   subject to x = v,   solved with ADMM:",
+         "xᵏ⁺¹ = arg minₓ≥₀ { f(x) + (ρ/2) ‖x − vᵏ + uᵏ‖² }     (Poisson step)",
+         "vᵏ⁺¹ = D(xᵏ⁺¹ + uᵏ, σ),   σ² = λ/ρ     (any Gaussian denoiser, e.g. BM3D)",
+         "uᵏ⁺¹ = uᵏ + xᵏ⁺¹ − vᵏ⁺¹,     ρ ← 1.065 ρ each iteration, 70 iterations"], 0.5, 1.13, 9.0, 2.5, 14, gap=8)
+text(s, "Key idea: the likelihood and the prior are handled in separate steps, so the prior can be replaced by any denoiser "
+        "without changing the noise model. This modularity is what our Direction A exploits.", 0.5, 3.85, 9.0, 0.9, 13)
+say(s, "60 seconds", "ADMM alternates a data step and a denoising step tied by a dual variable. The denoising step is a Gaussian denoising problem with noise level lambda over rho, so BM3D can be plugged in.",
+    "The data step has a closed form, which keeps P4IP fast.")
+
+# ---------------------------------------------------------------- 7. P4IP closed form
+s = new_slide("P4IP: closed-form Poisson step", REFS["p4ip"])
+text(s, ["aᵢ = vᵢᵏ − uᵢᵏ,     minₓᵢ≥₀ { xᵢ − yᵢ log xᵢ + (ρ/2)(xᵢ − aᵢ)² }",
+         "1 − yᵢ/xᵢ + ρ(xᵢ − aᵢ) = 0",
+         "xᵢᵏ⁺¹ = [ aᵢ − 1/ρ + √((aᵢ − 1/ρ)² + 4yᵢ/ρ) ] / 2,     yᵢ = 0:  xᵢᵏ⁺¹ = max(aᵢ − 1/ρ, 0)"], 0.5, 1.13, 9.0, 1.6, 15, gap=10)
+text(s, [[("Paper's reported result: ", True), ("best average PSNR at peaks 0.1 and 0.2 against Anscombe + BM3D and SPDA, "
+          "at minutes per image instead of hours; binning and multiple priors improve it further.", False)],
+         [("Our implementation: ", True), ("the same update, BM3D (Python bm3d package) as denoiser, ρ schedule and 70 iterations as in the paper.", False)]],
+     0.5, 3.0, 9.0, 1.7, 13, gap=9)
+say(s, "45 seconds", "Per pixel, the Poisson step is a quadratic equation with one non-negative root. A zero count simply shrinks a towards zero.",
+    "Next: did we reproduce the paper's numbers?")
+
+# ---------------------------------------------------------------- 8. protocol and changes
+s = new_slide("Experimental protocol and changes from the paper")
+table(s, [["", "Paper [1]", "Ours"],
+          ["Test images", "8 (Saturn, Flag, Cameraman, House, Swoosh, Peppers, Bridge, Ridges)", "8 from Set12 (incl. Cameraman, House, Peppers)"],
+          ["Tuning", "Per peak (not specified on which images)", "Per peak on 4 separate BSD68 images"],
+          ["Noise", "Poisson, peaks 0.1 to 4", "Same; one fixed noise draw per image and peak"],
+          ["BM3D", "Authors' MATLAB code", "Python bm3d package"],
+          ["SPDA", "Full algorithm (hours per image)", "Simplified: fixed sparsity, k-means groups, 3 rounds"],
+          ["Real data", "None", "FMD fluorescence microscopy (Poisson-Gaussian)"],
+          ["Statistics", "Averages", "Averages + paired Wilcoxon test, SSIM, runtime"]],
+      0.5, 1.05, 9.0, [1.4, 3.9, 3.7], size=10, row_h=0.36, right_from=99)
+text(s, "Training images for A2 dictionaries: 400 from BSD400. No test image is used for tuning or training.", 0.5, 4.55, 9.0, 0.35, 11)
+say(s, "45 seconds", "Same peaks and metric as the paper. The differences are listed so that every gap in the next slides can be traced to one of them.",
+    "Here is the replication of the paper's main table.")
+
+# ---------------------------------------------------------------- 9. replication average
+s = new_slide("Replication: average PSNR (paper Table 1)", REFS["p4ip"])
 rows = [["Method", "Source", "peak 0.1", "peak 0.2", "peak 1"]]
 paper = {"anscombe_bm3d": [16.59, 18.43, 21.73], "spda": [15.48, 18.57, 23.61], "p4ip_bm3d": [17.85, 19.33, 22.88]}
 for m in ("anscombe_bm3d", "spda", "p4ip_bm3d"):
-    rows.append([NAME[m], "paper (8 images)", *[f"{v:.2f}" for v in paper[m]]])
-    rows.append(["", "ours, 8 test images",
-                 *[f2(P0.loc[m, p]) if m in has0 else "running" for p in (0.1, 0.2, 1.0)]])
-    rows.append(["", "ours, 4 tuning images", *[f2(tune_psnr(m, p)) for p in (0.1, 0.2, 1.0)]])
-table(s, rows, 0.5, 1.05, 9.0, [2.3, 2.5, 1.4, 1.4, 1.4], size=10, row_h=0.25, right_from=2)
-lead = [p for p in (0.1, 0.2, 1.0) if tune_psnr("p4ip_bm3d", p) > tune_psnr("anscombe_bm3d", p)]
-spda_lead = [p for p in (0.1, 0.2, 1.0) if tune_psnr("spda", p) > tune_psnr("p4ip_bm3d", p)]
-text(s, "Same peaks and PSNR definition as the paper; different images and our own implementations. On our tuning images "
-        f"P4IP + BM3D beats Anscombe + BM3D at peaks {', '.join(f'{p:g}' for p in lead)} (test images: {', '.join(f'{p:g}' for p in (0.1, 0.2, 1.0) if P0.loc['p4ip_bm3d', p] > P0.loc['anscombe_bm3d', p])}), as in the paper; "
-        f"SPDA beats P4IP + BM3D at peak {', '.join(f'{p:g}' for p in spda_lead) or 'none'}.",
-     0.5, 4.2, 9.0, 0.55, 11)
-text(s, "Source: Rond, Giryes, Elad, arXiv:1511.02500 v1, Table 1 (no binning). Tuning-image values: results/tuned_params.json.",
-     0.5, 4.73, 9.0, 0.33, 9)
+    rows.append([NAME[m], "paper, its 8 images", *[f"{v:.2f}" for v in paper[m]]])
+    rows.append(["", "ours, 8 test images", *[f2(P0.loc[m, p]) for p in (0.1, 0.2, 1.0)]])
+table(s, rows, 0.5, 1.0, 9.0, [2.3, 2.5, 1.4, 1.4, 1.4], size=10, row_h=0.25, right_from=2)
+lead_t = [p for p in (0.1, 0.2, 1.0) if P0.loc["p4ip_bm3d", p] > P0.loc["anscombe_bm3d", p]]
+text(s, [f"Reproduced: P4IP + BM3D beats Anscombe + BM3D at peaks {', '.join(f'{p:g}' for p in lead_t)} "
+         f"(+{P0.loc['p4ip_bm3d', 0.1] - P0.loc['anscombe_bm3d', 0.1]:.2f} dB at 0.1), as in the paper.",
+         f"Not reproduced: SPDA leading at peak 1 (ours {P0.loc['spda', 1.0] - P0.loc['p4ip_bm3d', 1.0]:+.2f} dB vs P4IP); our SPDA is simplified.",
+         "Absolute values differ because the image sets differ; the next slide compares the same images."],
+     0.5, 3.45, 9.0, 1.5, 11.5, gap=5)
+say(s, "60 seconds", "The ranking between P4IP and Anscombe + BM3D is reproduced. Absolute values are not comparable across different image sets, so we check the three shared images.",
+    "On the images both studies use, the numbers match closely.")
 
-# ------------------------------------------------------------------ 4b. per-image replication on the shared images
-s = new_slide("Replication on the images shared with the paper", PAPER_REF)
-PAPER_IMG = {  # Rond, Giryes, Elad, arXiv:1511.02500 v1, Table 1 (no binning), peaks 0.1 ... 4
-    ("cameraman", "anscombe_bm3d"): [15.66, 17.35, 18.83, 20.37, 22.13, 23.94],
-    ("cameraman", "p4ip_bm3d"): [16.88, 17.82, 19.27, 20.54, 21.87, 23.29],
-    ("house", "anscombe_bm3d"): [16.28, 18.37, 20.27, 22.35, 24.18, 26.04],
-    ("house", "p4ip_bm3d"): [18.30, 19.48, 20.93, 22.67, 24.65, 26.33],
-    ("peppers", "anscombe_bm3d"): [15.61, 17.10, 18.49, 19.89, 21.97, 24.07],
-    ("peppers", "p4ip_bm3d"): [16.28, 17.31, 18.86, 20.07, 21.33, 23.88],
-}
+# ---------------------------------------------------------------- 10. replication per image
+s = new_slide("Replication on the same images", REFS["p4ip"])
+PAPER_IMG = {("cameraman", "anscombe_bm3d"): [15.66, 17.35, 18.83, 20.37, 22.13, 23.94],
+             ("cameraman", "p4ip_bm3d"): [16.88, 17.82, 19.27, 20.54, 21.87, 23.29],
+             ("house", "anscombe_bm3d"): [16.28, 18.37, 20.27, 22.35, 24.18, 26.04],
+             ("house", "p4ip_bm3d"): [18.30, 19.48, 20.93, 22.67, 24.65, 26.33],
+             ("peppers", "anscombe_bm3d"): [15.61, 17.10, 18.49, 19.89, 21.97, 24.07],
+             ("peppers", "p4ip_bm3d"): [16.28, 17.31, 18.86, 20.07, 21.33, 23.88]}
 rows = [["Paper / ours (dB)", *[f"peak {p}" for p in PL]]]
 diffs = {"anscombe_bm3d": [], "p4ip_bm3d": []}
 for (im, m), pv in PAPER_IMG.items():
@@ -304,22 +390,195 @@ for (im, m), pv in PAPER_IMG.items():
     diffs[m].append([o.get(p) - v for p, v in zip(PEAKS, pv)])
 table(s, rows, 0.5, 1.05, 9.0, [2.7] + [1.05] * 6, size=10, row_h=0.3)
 dm = {m: np.nanmean(np.array(v), axis=0) for m, v in diffs.items()}
-text(s, [f"Ours minus paper, mean over the 3 images: P4IP + BM3D {', '.join(f'{x:+.2f}' for x in dm['p4ip_bm3d'])} dB; "
-         f"Anscombe + BM3D {', '.join(f'{x:+.2f}' for x in dm['anscombe_bm3d'])} dB (peaks 0.1 to 4).",
-         "From peak 0.2 up our P4IP + BM3D is within about 0.3 dB of the paper on the same images. The largest gaps are at peak 0.1, "
-         "where counts are fewest; both studies use their own noise draws, which cannot be matched."],
-     0.5, 3.45, 9.0, 1.3, 11, gap=6)
-text(s, "Cameraman, House and Peppers are in both test sets. Paper: Table 1 of arXiv:1511.02500 v1; ours: results/test.csv.", 0.5, 4.95, 9.0, 0.25, 9)
+text(s, [f"Ours minus paper, mean of the 3 images (peaks 0.1 to 4): P4IP + BM3D {', '.join(f'{x:+.2f}' for x in dm['p4ip_bm3d'])}; "
+         f"Anscombe + BM3D {', '.join(f'{x:+.2f}' for x in dm['anscombe_bm3d'])}.",
+         "From peak 0.2 up our P4IP + BM3D is within 0.31 dB of the paper. The largest gaps are at peak 0.1, where counts are fewest and "
+         "single noise draws differ between the two studies, and the BM3D implementations differ (Python vs MATLAB)."],
+     0.5, 3.45, 9.0, 1.4, 11, gap=6)
+say(s, "60 seconds", "This is the cleanest replication check: same image, same peak. P4IP agrees to within a third of a dB from peak 0.2 on.",
+    "The paper also reports binning and multiple priors; we reproduced those too.")
 
-# ------------------------------------------------------------------ 5. main chart
-s = new_slide("PSNR vs peak on the test images, no binning")
-line_chart(s, P0, ["anscombe_bm3d", "p4ip_bm3d", "spda", "A1_subband", "A3_bm3d_wavelet", "A2_wavelet_dict",
-                   "B_fista_dict", "gaussian_filter", "poisson_tv"], 0.5, 1.05, 9.0, 3.7, 12, 24)
-text(s, "Mean over 8 test images. P4IP + BM3D beats Anscombe + BM3D up to peak 1; strong averaging (SPDA, Gaussian filter) "
-        "is competitive at the lowest peaks; Anscombe + BM3D is best at peaks 2 and 4.", 0.5, 4.8, 9.0, 0.45, 11)
+# ---------------------------------------------------------------- 11. replication binning + multiple priors
+s = new_slide("Replication: binning and multiple priors (paper Tables 2, 3)", REFS["p4ip"])
+pb = {"cameraman": (18.25, 18.58, 18.58), "house": (19.71, 19.96, 20.02), "peppers": (17.44, 17.44, 17.63)}
+rows = [["Peak 0.2, 3×3 binning", "Anscombe + BM3D", "P4IP + BM3D", "P4IP, multiple priors"]]
+for im, (b1, b2, b3) in pb.items():
+    o = T3[(T3.image == im) & (T3.peak == 0.2)].set_index("method").psnr
+    rows.append([f"{im.capitalize()}: paper / ours", f"{b1:.2f} / {f2(o.get('anscombe_bm3d'))}",
+                 f"{b2:.2f} / {f2(o.get('p4ip_bm3d'))}", f"{b3:.2f} / {f2(o.get('A3_bm3d_wavelet'))}"])
+table(s, rows, 0.5, 1.05, 9.0, [2.7, 2.1, 2.1, 2.1], size=10.5, row_h=0.32)
+db_a = [T3[(T3.image == im) & (T3.peak == 0.2) & (T3.method == "anscombe_bm3d")].psnr.mean() - v[0] for im, v in pb.items()]
+db_p = [T3[(T3.image == im) & (T3.peak == 0.2) & (T3.method == "p4ip_bm3d")].psnr.mean() - v[1] for im, v in pb.items()]
+text(s, [f"Binning (sum 3×3 blocks, denoise, interpolate) reproduces Anscombe + BM3D within {max(abs(x) for x in db_a):.2f} dB. "
+         f"Our binned P4IP + BM3D is {-max(db_p):.1f} to {-min(db_p):.1f} dB below the paper: its binned tuning picked ρ₀ at the edge of an early, too-narrow grid.",
+         "Multiple priors: the paper adds a second prior to BM3D and gains 0.2 dB on average at peak 0.2. Our second prior is wavelet shrinkage (our A3); "
+         "with binning it did not gain; it inherited the same edge-of-grid P4IP parameters, so these binned numbers are lower bounds. "
+         "Without binning it does gain (Direction A)."],
+     0.5, 2.55, 9.0, 2.2, 11.5, gap=7)
+say(s, "45 seconds", "Binning is reproduced for the Anscombe baseline. Our binned P4IP runs used an early grid whose best value sat at the edge, which we state openly.",
+    "Synthetic noise is only half the story; next, real microscope data.")
 
+# ---------------------------------------------------------------- 12. FMD
+s = new_slide("Real data: FMD fluorescence microscopy", REFS["fmd"])
+fmd_path = f"{RES}/fmd.csv"
+if os.path.exists(fmd_path):
+    F = pd.read_csv(fmd_path)
+    agg = F.groupby("method").agg(psnr=("psnr", "mean"), ssim=("ssim", "mean"), n=("psnr", "size"))
+    order = [m for m in ["noisy", "gaussian_filter", "anscombe_bm3d", "spda", "A1_subband", "B_fista_dict", "p4ip_bm3d", "A3_bm3d_wavelet"] if m in agg.index]
+    nm = dict(NAME, noisy="Noisy raw capture")
+    bestp = agg.loc[[m for m in order if m != "noisy"], "psnr"].max()
+    rows = [["Method", "PSNR (dB)", "SSIM", "images"]]
+    bold = []
+    for i, m in enumerate(order, 1):
+        rows.append([nm[m], f"{agg.loc[m, 'psnr']:.2f}", f"{agg.loc[m, 'ssim']:.3f}", f"{agg.loc[m, 'n']:.0f}"])
+        if agg.loc[m, "psnr"] == bestp:
+            bold += [(i, 1)]
+    table(s, rows, 0.5, 1.05, 5.2, [2.9, 0.9, 0.8, 0.6], size=10, row_h=0.28, bold_cells=bold)
+    nz = F[F.method == "noisy"]
+    text(s, [f"48 real images (confocal, two-photon, wide-field); ground truth = average of 50 captures; central 256 × 256 crop as in FMD.",
+             f"Noise is Poisson-Gaussian, Var = a·u + b, fitted per image (median a = {nz.a.median():.1f}, b = {nz.b.median():.1f}). "
+             f"y = z/a + b/a² is then approximately Poisson; effective peak {nz.peak_eff.median():.0f} (median).",
+             "No tuning on FMD: parameters are transferred from the synthetic tuning (nearest peak, peak-scaled)."],
+         5.9, 1.05, 3.6, 3.8, 10.5, gap=6)
+else:
+    text(s, "FMD runs in progress.", 0.5, 1.2, 9.0, 0.4, 14)
+text(s, "PSNR on the 8-bit scale, 10 log₁₀(255²/MSE), as in the FMD benchmark. Source: results/fmd.csv.", 0.5, 4.85, 9.0, 0.25, 9)
+say(s, "60 seconds", "Real fluorescence images also have camera read noise. Fitting the gain and read noise per image turns the data into approximately Poisson counts, so every method runs unchanged.",
+    "With the baseline established, here are our own proposals.")
 
-# ------------------------------------------------------------------ 6/7. full tables
+# ---------------------------------------------------------------- 13. direction A idea
+s = new_slide("Proposed direction A: change the P4IP prior", REFS["p4ip"])
+text(s, [[("A1. Orthonormal wavelet shrinkage as the denoiser", True)],
+         "D(r, η) = WᵀS(Wr, η): one threshold, or one per wavelet level (tuned). A convex, interpretable prior.",
+         [("A2. Learned dictionary for wavelet-domain patches", True)],
+         "WₚRⱼr ≈ Bαⱼ, 256 atoms learned on 40,000 BSD400 patches; control: a pixel dictionary with the same atom count.",
+         [("A3. Multiple priors: BM3D + wavelet consensus", True)],
+         "Each iteration runs both denoisers and averages them (ρ_eff = 2ρ); the wavelet weight λ₂ is tuned.",
+         [("Hypothesis: ", True), ("wavelet structure complements BM3D where block matching is unreliable, i.e. at the lowest counts.", False)]],
+     0.5, 1.13, 9.0, 3.9, 13, gap=6)
+say(s, "45 seconds", "All three keep P4IP's exact Poisson step and change only the denoiser, exactly the modularity shown earlier.",
+    "Results for A1 first.")
+
+# ---------------------------------------------------------------- 14. A1
+s = new_slide("A1: wavelet prior, one vs per-level thresholds")
+rows = [["Test PSNR (dB)", *[f"peak {p}" for p in PL]]]
+for m in ("anscombe_bm3d", "p4ip_bm3d", "A1_wavelet", "A1_subband"):
+    rows.append([NAME[m], *[f2(P0.loc[m, p]) for p in PEAKS]])
+table(s, rows, 0.5, 1.05, 9.0, [3.3] + [0.95] * 6, size=10.5, row_h=0.28)
+w = TUNED["A1_subband"]
+wf = [w[str(float(p))]["params"]["w1"] for p in PEAKS]; wc = [w[str(float(p))]["params"]["w4"] for p in PEAKS]
+a1 = [P0.loc["A1_subband", p] - P0.loc["A1_wavelet", p] for p in PEAKS]
+text(s, [f"Per-level thresholds gain up to {max(a1):.2f} dB. Why: the tuned weights are large at the finest level (w₁ = {min(wf):g} to {max(wf):g}) "
+         f"and small at the coarsest (w₄ = {min(wc):g} to {max(wc):g}). At low counts fine scales are mostly noise and coarse scales carry the structure; "
+         "one threshold must compromise between them.",
+         f"A1 beats Anscombe + BM3D at peak 0.1 ({P0.loc['A1_subband', 0.1] - P0.loc['anscombe_bm3d', 0.1]:+.2f} dB) but loses from 0.5 up. "
+         "Why: shrinkage in a fixed basis has no non-local self-similarity; once there are enough photons, BM3D's grouping recovers texture that wavelets erase."],
+     0.5, 2.6, 9.0, 2.3, 11.5, gap=7)
+say(s, "60 seconds", "Two results: per-level thresholds clearly help, and the wavelet prior alone is a strong choice only at the lowest light.",
+    "Can a learned dictionary do better than a fixed wavelet basis?")
+
+# ---------------------------------------------------------------- 15. A2
+s = new_slide("A2: wavelet-domain vs pixel dictionary")
+rows = [["PSNR (dB)", *[f"peak {p}" for p in PL]]]
+for m in ("p4ip_bm3d", "A2_wavelet_dict", "A2_pixel_dict"):
+    rows.append([NAME[m] + ", tuning", *[f2(tune_psnr(m, p)) for p in PEAKS]])
+for m in ("p4ip_bm3d", "A2_wavelet_dict", "A2_pixel_dict"):
+    rows.append([NAME[m] + ", test 3×3", *[f2(P3.loc[m, p]) for p in PEAKS]])
+table(s, rows, 0.5, 1.05, 9.0, [3.3] + [0.95] * 6, size=10, row_h=0.27)
+g3 = [P3.loc["A2_wavelet_dict", p] - P3.loc["A2_pixel_dict", p] for p in PEAKS]
+text(s, [f"The wavelet-domain dictionary is not better than the pixel dictionary (test, binned: {min(g3):+.2f} to {max(g3):+.2f} dB). "
+         "Why: the 8×8 patch Haar transform is orthonormal, so coding in the wavelet domain spans the same space as coding in pixels; "
+         "restricting each atom to one orientation removes freedom instead of adding information.",
+         "Both stay below P4IP + BM3D. Why: they are local patch models without BM3D's non-local grouping; the result matches the K-SVD vs BM3D gap known for Gaussian noise.",
+         "Unbinned test runs of A2 were skipped (about 25 minutes per image); the tuning-image numbers show the same ordering."],
+     0.5, 3.15, 9.0, 1.9, 10, gap=5)
+say(s, "50 seconds", "The idea was that wavelet structure helps a learned dictionary. It does not, and the reason is mathematical: an orthonormal change of basis does not change what a dictionary can represent.",
+    "The third prior, combining BM3D with wavelets, is where the hypothesis holds.")
+
+# ---------------------------------------------------------------- 16. A3
+s = new_slide("A3: multiple priors help at the lowest light")
+rows = [["PSNR (dB)", *[f"peak {p}" for p in PL]]]
+rows.append(["P4IP + BM3D, test", *[f2(P0.loc["p4ip_bm3d", p]) for p in PEAKS]])
+rows.append(["A3 BM3D + wavelet, test", *[f2(P0.loc["A3_bm3d_wavelet", p]) for p in PEAKS]])
+rows.append(["Difference, test", *[("–" if pd.isna(P0.loc["A3_bm3d_wavelet", p]) else f"{P0.loc['A3_bm3d_wavelet', p] - P0.loc['p4ip_bm3d', p]:+.2f}") for p in PEAKS]])
+rows.append(["Difference, tuning images", *[f"{tune_psnr('A3_bm3d_wavelet', p) - tune_psnr('p4ip_bm3d', p):+.2f}" for p in PEAKS]])
+table(s, rows, 0.5, 1.05, 9.0, [3.3] + [0.95] * 6, size=10.5, row_h=0.28, bold_cells=[(3, 1), (4, 1)])
+pa3 = paired(T0, "A3_bm3d_wavelet", ref="p4ip_bm3d")[0]
+text(s, [f"At peak 0.1 the wavelet prior adds {P0.loc['A3_bm3d_wavelet', 0.1] - P0.loc['p4ip_bm3d', 0.1]:+.2f} dB on the test images"
+         + (f" ({pa3[1]}/{pa3[2]} images better, Wilcoxon p = {pa3[3]:.4f})" if pa3 else "") + ".",
+         "Why: at peak 0.1 most patches are zeros, so BM3D's block matching groups unrelated patches and leaves blotches. "
+         "Wavelet shrinkage gives a stable smooth estimate; averaging the two in the consensus step damps BM3D's errors.",
+         "From peak 0.5 up, matching is reliable, the wavelet prior only adds blur, and the tuning drives its weight to the smallest value tried: A3 → P4IP + BM3D."],
+     0.5, 2.6, 9.0, 2.3, 11.5, gap=7)
+say(s, "60 seconds", "This is the positive result of Direction A: the multiple-prior extension helps exactly where we predicted, and tuning switches it off where it would hurt.",
+    "Direction B takes a different route: an explicit sparse model.")
+
+# ---------------------------------------------------------------- 17. direction B
+s = new_slide("Direction B: explicit sparsity with ISTA vs FISTA", REFS["fista"])
+text(s, ["z = A(y),   minimise F(α) = ½ ‖Dα − z‖² + λ ‖α‖₁,   D = redundant wavelet or learned dictionary",
+         "ISTA: αᵏ⁺¹ = S(αᵏ − Dᵀ(Dαᵏ − z)/L, λ/L)        FISTA: same step from an extrapolated point, O(1/k²) vs O(1/k)"],
+     0.5, 1.05, 9.0, 0.8, 12, gap=5)
+it3, tm3, it0 = table_of(T3, "iterations"), table_of(T3, "time"), table_of(T0, "iterations")
+rows = [["3×3 binned", "PSNR ISTA", "PSNR FISTA", "iter. ISTA", "iter. FISTA"]]
+for fr, lab in (("swt", "wavelet"), ("dict", "dictionary")):
+    for p in (0.5, 1.0, 4.0):
+        rows.append([f"{lab}, peak {p:g}", f2(P3.loc[f"B_ista_{fr}", p]), f2(P3.loc[f"B_fista_{fr}", p]),
+                     f"{it3.loc[f'B_ista_{fr}', p]:.0f}", f"{it3.loc[f'B_fista_{fr}', p]:.0f}"])
+table(s, rows, 0.5, 1.95, 5.4, [1.6, 0.95, 0.95, 0.95, 0.95], size=9.5, row_h=0.25)
+s.shapes.add_picture(CONV, Inches(6.1), Inches(1.95), Inches(3.4), Inches(2.97))
+ratio = [it3.loc[f"B_ista_{fr}", p] / it3.loc[f"B_fista_{fr}", p] for fr in ("swt", "dict") for p in PEAKS if it3.loc[f"B_ista_{fr}", p] > 5]
+zero = [p for p in PEAKS if it0.loc["B_fista_dict", p] <= 1 and it0.loc["B_fista_swt", p] <= 1]
+text(s, [f"Same λ, start and stopping rule: identical PSNR; FISTA needs {min(ratio):.1f} to {max(ratio):.1f}× fewer iterations "
+         "(ISTA often stops at the 2000 cap, so these are lower bounds). Why identical: F is convex, one minimum.",
+         f"Without binning, tuning sets every detail coefficient to 0 at peaks {', '.join(f'{p:g}' for p in zero)}. Why: detail coefficients "
+         "of the Anscombe image are below the noise (σ ≈ 1), so keeping any of them adds noise."],
+     0.5, 3.75, 5.4, 1.3, 9.5, gap=4)
+say(s, "70 seconds", "Both solvers minimise the same convex objective, so they must reach the same image; FISTA's momentum gets there in far fewer iterations, as the curves on the right show.",
+    "Putting all methods side by side.")
+
+# ---------------------------------------------------------------- 18. overall comparison
+s = new_slide("All methods: PSNR vs peak (test images)")
+line_chart(s, P0, ["anscombe_bm3d", "p4ip_bm3d", "spda", "A1_subband", "A3_bm3d_wavelet", "B_fista_dict",
+                   "gaussian_filter", "poisson_tv"], 0.5, 1.05, 9.0, 3.6, 12, 24)
+text(s, "No binning, mean over 8 test images (A3 shown once complete). Lowest light: P4IP-type and smoothing methods lead; "
+        "highest peaks: Anscombe + BM3D leads, as its Gaussian approximation becomes accurate.", 0.5, 4.72, 9.0, 0.5, 11)
+say(s, "40 seconds", "The crossover between P4IP and Anscombe + BM3D happens between peaks 1 and 2, where the Anscombe approximation becomes good.",
+    "What we conclude from all of this.")
+
+# ---------------------------------------------------------------- 19. findings and conclusions
+s = new_slide("Major findings")
+p4 = [p for p in PEAKS if P0.loc["p4ip_bm3d", p] > P0.loc["anscombe_bm3d", p]]
+text(s, [f"1.  Replication: P4IP + BM3D beats Anscombe + BM3D at peaks {', '.join(f'{p:g}' for p in p4)}; on shared images it matches the paper within 0.31 dB from peak 0.2.",
+         f"2.  The exact unbiased inverse Anscombe is essential: {min(gap):.1f} to {max(gap):.1f} dB over the algebraic inverse.",
+         "3.  Multiple priors (BM3D + wavelet) improve P4IP at the lowest light and switch themselves off above it.",
+         f"4.  Per-level wavelet thresholds add up to {max(a1):.1f} dB; learned wavelet-domain dictionaries do not beat pixel dictionaries.",
+         f"5.  FISTA reaches the ISTA solution in {min(ratio):.1f} to {max(ratio):.1f}× fewer iterations; the explicit sparse model needs binning to be useful.",
+         "6.  No method wins at every peak: the best prior depends on the photon count."],
+     0.5, 1.13, 9.0, 3.9, 13, gap=7)
+say(s, "60 seconds", "Six findings, each backed by a slide earlier in the talk.", "And what we would do next.")
+
+# ---------------------------------------------------------------- 20. future directions
+s = new_slide("Limitations and future directions")
+text(s, [[("Limitations", True)],
+         "One noise draw per image; 8 test images. Simplified SPDA. Python BM3D instead of the authors' code.",
+         "Some tuned parameters lie at the edge of their grid (flagged in the logs); binned P4IP-type runs used an early grid.",
+         [("Future directions", True)],
+         "Choose the prior weight per image or per region from the photon count (A3 switches itself off already).",
+         "Learned (CNN) denoisers inside P4IP; multiple noise draws; the full FMD set with tuned parameters.",
+         "Poisson-Gaussian ADMM step for microscopy instead of the shifted-Poisson approximation."],
+     0.5, 1.13, 9.0, 3.9, 13, gap=6)
+say(s, "40 seconds", "Limitations are stated openly; each future direction follows from a finding.", "Thank you; we are happy to take questions.")
+
+# ---------------------------------------------------------------- 21. thanks
+s = new_slide("Thank you")
+text(s, ["Questions?",
+         "Code and logs: github.com/tarantulass/EE779-Poisson-Denoising (experiments/, results/).",
+         [("AI use: ", True), ("code, README and this deck were written with Claude (Anthropic) following our proposal; every number is read from the result logs.", False)],
+         "References: [1] Rond, Giryes, Elad, arXiv:1511.02500. [2] Dabov et al., IEEE TIP 2007. [3] Giryes, Elad, IEEE TIP 2014. "
+         "[4] Mäkitalo, Foi, IEEE TIP 2011. [5] Beck, Teboulle, SIAM J. Imaging Sci. 2009. [6] Zhang et al., CVPR 2019 (FMD)."],
+     0.5, 1.13, 9.0, 3.9, 13, gap=12)
+
+# ================================================================ backup
 def full_table(pt, title, note, tune_key_suffix=""):
     s = new_slide(title)
     ms = [m for m in ORDER if m in pt.index]
@@ -337,115 +596,11 @@ def full_table(pt, title, note, tune_key_suffix=""):
     return s
 
 
-full_table(P0, "Mean PSNR (dB), test images, no binning", "Bold: best per peak. Source: results/test.csv.")
-full_table(P3, "Mean PSNR (dB), test images, 3×3 binning", "Bold: best per peak. Source: results/test_bin3.csv.")
 
-# ------------------------------------------------------------------ 8. P4IP-type methods on tuning images (unbinned)
-s = new_slide("P4IP-type methods, tuning images, no binning")
-rows = [["Method", *[f"peak {p}" for p in PL]]]
-TM = ["anscombe_bm3d", "spda", "A1_subband", "p4ip_bm3d", "A3_bm3d_wavelet", "A2_wavelet_dict", "A2_pixel_dict"]
-vals = {m: [tune_psnr(m, p) for p in PEAKS] for m in TM}
-best = [max(v[i] for v in vals.values() if v[i] is not None) for i in range(6)]
-bold = [(i, j + 1) for i, m in enumerate(TM, 1) for j in range(6) if vals[m][j] == best[j]]
-for m in TM:
-    rows.append([NAME[m], *[f2(v) for v in vals[m]]])
-table(s, rows, 0.5, 1.13, 9.0, [3.3] + [0.95] * 6, size=10.5, row_h=0.28, bold_cells=bold)
-text(s, ["Mean PSNR over the 4 tuning images at the tuned parameters (results/tuned_params.json). "
-         "Test-image results without binning: P4IP + BM3D complete, A3 " + ("complete" if "A3_bm3d_wavelet" in has0 and not P0.loc["A3_bm3d_wavelet"].isna().any() else "partial") + ", A2 not run (too slow; binned test results are on the binned table).",
-         f"P4IP + BM3D beats Anscombe + BM3D at peaks {', '.join(PL[i] for i in range(6) if vals['p4ip_bm3d'][i] > vals['anscombe_bm3d'][i])}. "
-         f"A3 beats P4IP + BM3D at peaks {', '.join(PL[i] for i in range(6) if round(vals['A3_bm3d_wavelet'][i], 2) > round(vals['p4ip_bm3d'][i], 2))}. Bold: best per peak."],
-     0.5, 3.45, 9.0, 1.3, 12, gap=8)
+full_table(P0, "Backup: mean PSNR (dB), test images, no binning", "Bold: best per peak. Source: results/test.csv.")
+full_table(P3, "Backup: mean PSNR (dB), test images, 3×3 binning", "Bold: best per peak. Source: results/test_bin3.csv.")
 
-# ------------------------------------------------------------------ 9. multiple priors
-s = new_slide("Multiple priors: BM3D + wavelet consensus (A3)")
-text(s, "Each ADMM iteration denoises with BM3D and with wavelet shrinkage; the prior step averages the two (ρ_eff = 2ρ).",
-     0.5, 1.05, 9.0, 0.45, 13)
-rows = [["", *[f"peak {p}" for p in PL]]]
-rows.append(["P4IP + BM3D, tuning", *[f2(tune_psnr("p4ip_bm3d", p)) for p in PEAKS]])
-rows.append(["A3 BM3D + wavelet, tuning", *[f2(tune_psnr("A3_bm3d_wavelet", p)) for p in PEAKS]])
-rows.append(["Difference", *[f"{tune_psnr('A3_bm3d_wavelet', p) - tune_psnr('p4ip_bm3d', p):+.2f}" for p in PEAKS]])
-if "A3_bm3d_wavelet" in has0 and "p4ip_bm3d" in has0:
-    rows.append(["P4IP + BM3D, test", *[f2(P0.loc["p4ip_bm3d", p]) for p in PEAKS]])
-    rows.append(["A3 BM3D + wavelet, test", *[f2(P0.loc["A3_bm3d_wavelet", p]) for p in PEAKS]])
-if "A3_bm3d_wavelet" in has3 and "p4ip_bm3d" in has3:
-    rows.append(["P4IP + BM3D, test, 3×3 binned", *[f2(P3.loc["p4ip_bm3d", p]) for p in PEAKS]])
-    rows.append(["A3 BM3D + wavelet, test, 3×3 binned", *[f2(P3.loc["A3_bm3d_wavelet", p]) for p in PEAKS]])
-table(s, rows, 0.5, 1.55, 9.0, [3.3] + [0.95] * 6, size=10, row_h=0.25, bold_cells=[(3, 1), (3, 2)])
-d01 = tune_psnr("A3_bm3d_wavelet", 0.1) - tune_psnr("p4ip_bm3d", 0.1)
-d01t = P0.loc["A3_bm3d_wavelet", 0.1] - P0.loc["p4ip_bm3d", 0.1] if "A3_bm3d_wavelet" in has0 else float("nan")
-text(s, [f"Without binning the wavelet prior adds {d01:.2f} dB at peak 0.1 on the tuning images ({d01t:+.2f} dB on the test images) and {tune_psnr('A3_bm3d_wavelet', 0.2) - tune_psnr('p4ip_bm3d', 0.2):.2f} dB at 0.2; "
-         "from peak 0.5 up the tuned wavelet weight is the smallest tried and A3 equals P4IP + BM3D.",
-         "With binning A3 is worse at every peak. Both binned runs used an older P4IP grid whose best ρ₀ lay at the grid edge, so the binned P4IP-type numbers are a lower bound."],
-     0.5, 3.75, 9.0, 1.2, 11, gap=6)
 
-# ------------------------------------------------------------------ 10. direction A overview
-s = new_slide("Direction A: changing the P4IP prior")
-line_chart(s, P3, ["anscombe_bm3d", "p4ip_bm3d", "A1_wavelet", "A1_subband", "A2_wavelet_dict", "A2_pixel_dict",
-                   "A3_bm3d_wavelet"], 0.5, 1.05, 5.6, 3.6, 14, 23)
-a1 = [P0.loc["A1_subband", p] - P0.loc["A1_wavelet", p] for p in PEAKS]
-a2 = [P3.loc["A2_wavelet_dict", p] - P3.loc["A2_pixel_dict", p] for p in PEAKS] if "A2_wavelet_dict" in has3 else None
-lines = [f"A1: per-level thresholds gain {min(a1):.2f} to {max(a1):.2f} dB over one threshold (test, no binning).",
-         f"A1 vs Anscombe + BM3D: {P0.loc['A1_subband', 0.1] - P0.loc['anscombe_bm3d', 0.1]:+.2f} dB at peak 0.1, "
-         f"{P0.loc['A1_subband', 4.0] - P0.loc['anscombe_bm3d', 4.0]:+.2f} dB at peak 4."]
-if a2:
-    lines.append(f"A2: wavelet-patch minus pixel dictionary {min(a2):+.2f} to {max(a2):+.2f} dB (test, binned). "
-                 "The wavelet structure does not help.")
-lines.append("A3: see the previous slide.")
-text(s, lines, 6.3, 1.1, 3.2, 3.7, 11.5, gap=8)
-text(s, "Chart: test images with 3×3 binning, the only setting where all Direction A runs have finished.", 0.5, 4.75, 9.0, 0.3, 9)
-
-# ------------------------------------------------------------------ 11. direction B
-s = new_slide("Direction B: ISTA vs FISTA on the same objective")
-it0, it3, tm3 = table_of(T0, "iterations"), table_of(T3, "iterations"), table_of(T3, "time")
-rows = [["3×3 binned", "PSNR ISTA", "PSNR FISTA", "iter. ISTA", "iter. FISTA", "s ISTA", "s FISTA"]]
-for fr, lab in (("swt", "wavelet"), ("dict", "dictionary")):
-    for p in (0.5, 1.0, 4.0):
-        rows.append([f"{lab}, peak {p:g}", f2(P3.loc[f"B_ista_{fr}", p]), f2(P3.loc[f"B_fista_{fr}", p]),
-                     f"{it3.loc[f'B_ista_{fr}', p]:.0f}", f"{it3.loc[f'B_fista_{fr}', p]:.0f}",
-                     f"{tm3.loc[f'B_ista_{fr}', p]:.1f}", f"{tm3.loc[f'B_fista_{fr}', p]:.1f}"])
-table(s, rows, 0.5, 1.1, 5.5, [1.5, 0.65, 0.7, 0.65, 0.7, 0.6, 0.7], size=9.5, row_h=0.27)
-s.shapes.add_picture(CONV, Inches(6.15), Inches(1.1), Inches(3.35), Inches(2.93))
-ratio = [it3.loc[f"B_ista_{fr}", p] / it3.loc[f"B_fista_{fr}", p] for fr in ("swt", "dict") for p in PEAKS
-         if it3.loc[f"B_ista_{fr}", p] > 5]
-zero = [p for p in PEAKS if it0.loc["B_fista_dict", p] <= 1 and it0.loc["B_fista_swt", p] <= 1]
-text(s, [f"Same λ, start α⁰ = 0 and stopping rule |ΔF| ≤ 10⁻⁷F: the same PSNR; FISTA needs {min(ratio):.1f} to {max(ratio):.1f}× fewer iterations (ISTA often stops at the 2000-iteration cap, so these are lower bounds).",
-         f"Without binning the tuned λ sets every detail coefficient to zero at peaks {', '.join(f'{p:g}' for p in zero)}: "
-         "the estimate is the smooth coarse part of the Anscombe image."],
-     0.5, 3.15, 5.5, 1.6, 11, gap=8)
-text(s, "Right: (F_k − F*)/F*, cameraman, 3×3 binned; F* from 5000 FISTA iterations. Iteration cap 2000.", 0.5, 4.83, 9.0, 0.25, 9)
-
-# ------------------------------------------------------------------ 12. inverse
-s = new_slide("Exact vs algebraic inverse Anscombe")
-bar_chart(s, PL, [("exact unbiased inverse", [float(P0.loc["anscombe_bm3d", p]) for p in PEAKS]),
-                  ("algebraic inverse z²/4 − 3/8", [float(P0.loc["anscombe_bm3d_algebraic", p]) for p in PEAKS])],
-          0.5, 1.05, 6.0, 3.8, "PSNR (dB)", ["1F77B4", "BFBFBF"])
-gap = [P0.loc["anscombe_bm3d", p] - P0.loc["anscombe_bm3d_algebraic", p] for p in PEAKS]
-text(s, [f"Same BM3D output, only the inverse changes: the exact inverse gains {min(gap):.1f} to {max(gap):.1f} dB.",
-         f"The gap is largest at peak {PL[int(np.argmax(gap))]} and smallest at peak {PL[int(np.argmin(gap))]}.",
-         "All Anscombe-based methods in this study use the exact inverse."], 6.7, 1.2, 2.8, 3.6, 12, gap=8)
-
-# ------------------------------------------------------------------ 13. conventional
-s = new_slide("Conventional methods")
-line_chart(s, P0, ["anscombe_bm3d", "gaussian_filter", "mean_filter", "nl_means", "poisson_tv", "wavelet_threshold",
-                   "wiener_filter"], 0.5, 1.05, 6.2, 3.7, 10, 24)
-text(s, [f"Gaussian filter on the Anscombe image: {P0.loc['gaussian_filter', 0.1]:.2f} dB at peak 0.1, above Anscombe + BM3D ({P0.loc['anscombe_bm3d', 0.1]:.2f}).",
-         f"Poisson-TV is the best conventional method at peak 2 ({P0.loc['poisson_tv', 2.0]:.2f} dB).",
-         f"Median filter: {P0.loc['median_filter', 0.1]:.2f} dB at peak 0.1 (not plotted); most counts are 0."],
-     6.9, 1.2, 2.6, 3.6, 11.5, gap=8)
-
-# ------------------------------------------------------------------ 14. binning effect
-s = new_slide("Effect of 3×3 binning")
-BM = [m for m in ["anscombe_bm3d", "p4ip_bm3d", "spda", "A1_subband", "B_fista_dict", "nl_means", "poisson_tv"]
-      if m in has0 and m in has3]
-rows = [["PSNR binned − unbinned (dB)", *[f"peak {p}" for p in PL]]]
-for m in BM:
-    rows.append([NAME[m], *[f"{P3.loc[m, p] - P0.loc[m, p]:+.2f}" for p in PEAKS]])
-table(s, rows, 0.5, 1.13, 9.0, [3.3] + [0.95] * 6, size=10.5, row_h=0.28)
-text(s, [f"Binning helps at low counts: Anscombe + BM3D {P0.loc['anscombe_bm3d', 0.1]:.2f} → {P3.loc['anscombe_bm3d', 0.1]:.2f} dB at peak 0.1.",
-         f"It costs resolution at high counts: {P0.loc['anscombe_bm3d', 4.0]:.2f} → {P3.loc['anscombe_bm3d', 4.0]:.2f} dB at peak 4.",
-         "Best binned methods per peak are in bold on the binned PSNR table."], 0.5, 3.6, 9.0, 1.2, 12, gap=8)
-
-# ------------------------------------------------------------------ 15/16. paired tests
 def paired_slide(d, title, src, methods):
     s = new_slide(title)
     rows = [["Method minus Anscombe + BM3D (dB)", *[f"peak {p}" for p in PL]]]
@@ -455,8 +610,8 @@ def paired_slide(d, title, src, methods):
         for j, v in enumerate(paired(d, m)):
             if v is None:
                 r.append("–"); continue
-            mean, w, n, pv = v
-            r.append(f"{mean:+.2f}{'*' if pv < 0.05 else ''}  ({w}/{n})")
+            mean, wn, n, pv = v
+            r.append(f"{mean:+.2f}{'*' if pv < 0.05 else ''}  ({wn}/{n})")
             if pv < 0.05:
                 bold.append((i, j + 1))
         rows.append(r)
@@ -467,24 +622,30 @@ def paired_slide(d, title, src, methods):
 
 PM = ["p4ip_bm3d", "spda", "A1_wavelet", "A1_subband", "A2_wavelet_dict", "A2_pixel_dict", "A3_bm3d_wavelet",
       "B_fista_swt", "B_fista_dict", "gaussian_filter", "nl_means", "poisson_tv"]
-paired_slide(T0, "Paired comparison with Anscombe + BM3D, no binning", "results/test.csv", PM)
-paired_slide(T3, "Paired comparison with Anscombe + BM3D, 3×3 binning", "results/test_bin3.csv", PM)
+paired_slide(T0, "Backup: paired comparison, no binning", "results/test.csv", PM)
+paired_slide(T3, "Backup: paired comparison, 3×3 binning", "results/test_bin3.csv", PM)
 
-# ------------------------------------------------------------------ 17. SSIM and runtime
-s = new_slide("SSIM and runtime")
+s = new_slide("Backup: effect of 3×3 binning")
+BM = [m for m in ["anscombe_bm3d", "p4ip_bm3d", "spda", "A1_subband", "B_fista_dict", "nl_means", "poisson_tv"] if m in has0 and m in has3]
+rows = [["PSNR binned − unbinned (dB)", *[f"peak {p}" for p in PL]]]
+for m in BM:
+    rows.append([NAME[m], *[f"{P3.loc[m, p] - P0.loc[m, p]:+.2f}" for p in PEAKS]])
+table(s, rows, 0.5, 1.13, 9.0, [3.3] + [0.95] * 6, size=10.5, row_h=0.28)
+text(s, "Why: summing 3×3 blocks multiplies the counts by 9, so the Anscombe approximation holds and the noise is relatively smaller; "
+        "the price is resolution, which dominates once there are enough photons.", 0.5, 3.6, 9.0, 0.8, 12)
+
+s = new_slide("Backup: SSIM and runtime")
 S0, R0, R3 = table_of(T0, "ssim"), table_of(T0, "time"), table_of(T3, "time")
-SR = ["anscombe_bm3d", "p4ip_bm3d", "spda", "A1_subband", "A2_wavelet_dict", "A3_bm3d_wavelet", "B_fista_dict",
-      "B_ista_dict", "gaussian_filter", "poisson_tv"]
-rows = [["Method", "SSIM 0.1", "SSIM 1", "SSIM 4", "s/image, peak 1", "s/image, binned"]]
+SR = ["anscombe_bm3d", "p4ip_bm3d", "spda", "A1_subband", "A3_bm3d_wavelet", "B_fista_dict", "B_ista_dict", "gaussian_filter", "poisson_tv"]
+rows = [["Method", "SSIM 0.1", "SSIM 1", "SSIM 4", "s/image, peak 1"]]
 for m in SR:
-    rows.append([NAME[m], *[f"{S0.loc[m, p]:.3f}" if m in has0 else "–" for p in (0.1, 1.0, 4.0)],
-                 f"{R0.loc[m, 1.0]:.1f}" if m in has0 else "–", f"{R3.loc[m, 1.0]:.1f}" if m in has3 else "–"])
-table(s, rows, 0.5, 1.13, 9.0, [3.4, 0.95, 0.95, 0.95, 1.35, 1.4], size=10, row_h=0.27)
-text(s, "SSIM on the test images without binning. Runtimes: a 2-core cloud machine for unbinned runs and a 12-core laptop for "
-        "the binned P4IP-type runs, one image per core, so they are comparable within a column only.", 0.5, 4.3, 9.0, 0.6, 10)
+    rows.append([NAME[m], *[f2(S0.loc[m, p]) if m in has0 and not pd.isna(S0.loc[m, p]) else "–" for p in (0.1, 1.0, 4.0)],
+                 f"{R0.loc[m, 1.0]:.1f}" if m in has0 and not pd.isna(R0.loc[m, 1.0]) else "–"])
+table(s, rows, 0.5, 1.13, 9.0, [3.6, 1.2, 1.2, 1.2, 1.8], size=10, row_h=0.27)
+text(s, "SSIM on the test images without binning. Runtimes are wall-clock per image, one image per core; the P4IP-type runs were on a "
+        "12-core laptop running 12 images at once, the others on a 2-core cloud machine.", 0.5, 4.2, 9.0, 0.6, 10)
 
-# ------------------------------------------------------------------ 18. example
-s = new_slide("Example: cameraman, peak 1, no binning")
+s = new_slide("Backup: example, cameraman at peak 1")
 info = json.load(open(f"{EX}/info.json"))
 tiles = [("clean", "Clean"), ("noisy", "Noisy counts"), ("anscombe_bm3d", None), ("spda", None),
          ("poisson_tv", None), ("A1_subband", None), ("B_fista_dict", None), ("anscombe_bm3d_algebraic", None)]
@@ -494,30 +655,7 @@ for i, (k, lab) in enumerate(tiles):
     cap = (lab or NAME[k]) + (f", {info[k]:.2f} dB" if k in info else "")
     text(s, cap, x - 0.05, y + 1.72, 2.2, 0.3, 9, align=PP_ALIGN.CENTER)
 
-# ------------------------------------------------------------------ 19. conclusions
-s = new_slide("Conclusions")
-text(s, [
-    f"The exact unbiased inverse matters: {min(gap):.1f} to {max(gap):.1f} dB over the algebraic inverse.",
-    f"Replication: on the test images P4IP + BM3D beats Anscombe + BM3D at peaks {', '.join(f'{p:g}' for p in PEAKS if P0.loc['p4ip_bm3d', p] > P0.loc['anscombe_bm3d', p])} "
-    f"(+{P0.loc['p4ip_bm3d', 0.1] - P0.loc['anscombe_bm3d', 0.1]:.2f} dB at peak 0.1), as the paper reports; Anscombe + BM3D is better at the highest peaks.",
-    f"Multiple priors: BM3D + wavelet improves P4IP + BM3D at peak 0.1 by {d01:.2f} dB (tuning) and {d01t:+.2f} dB (test); no gain from peak 0.5 up.",
-    f"A1: per-level wavelet thresholds add up to {max(a1):.1f} dB; the wavelet prior alone stays below BM3D above peak 0.5.",
-    "A2: the wavelet-patch dictionary is not better than the pixel dictionary.",
-    f"Direction B: FISTA reaches the ISTA solution in {min(ratio):.1f} to {max(ratio):.1f}× fewer iterations; without binning the tuned problem is trivial.",
-    "No method wins at every peak: SPDA and smooth estimators lead at the lowest counts, BM3D-based methods above.",
-], 0.5, 1.13, 9.0, 3.9, 13, gap=7)
-
-# ------------------------------------------------------------------ 20. limitations and reproduction
-s = new_slide("Limitations and reproduction")
-text(s, [
-    "One noise draw per image; 8 test images, so a paired test can reach at best p = 0.0078.",
-    "SPDA is simplified (fixed sparsity, k-means groups, 3 rounds). Our Anscombe + BM3D is below the paper's numbers.",
-    "Some tuned parameters lie at the edge of their grid (flagged in the tuning log), mainly for the binned P4IP-type runs and A2. A2 without binning was tuned but not run on the test images (about 25 min per image).",
-    [("Reproduce: ", True), ("python -m experiments.tune / evaluate --methods all [--bin 3]; python -m experiments.evaluate --summary", False)],
-    [("AI use: ", True), ("code, README and this deck were written with Claude (Anthropic) following our proposal deck; every number is read from the result logs.", False)],
-], 0.5, 1.13, 9.0, 3.9, 13, gap=9)
-
-# ------------------------------------------------------------------ footers like the template
+# ---------------------------------------------------------------- footers like the template
 N = len(SLIDES)
 for i, s in enumerate(SLIDES, 1):
     text(s, f"{i} / {N}", 0.5, 5.3, 2.34, 0.18, 9)

@@ -1554,10 +1554,140 @@
  "p4ip_bm3d@bin3": {
   "0.1": {
    "params": {
+    "lam": 1.0,
+    "rho0": 10.0
+   },
+   "tune_psnr": 18.266994999220586,
+   "at_grid_edge": [
+    "rho0"
+   ]
+  },
+  "0.2": {
+   "params": {
+    "lam": 0.9999999999999999,
+    "rho0": 5.0
+   },
+   "tune_psnr": 18.89062620430211,
+   "at_grid_edge": [
+    "rho0"
+   ]
+  },
+  "0.5": {
+   "params": {
+    "lam": 1.0000000000000002,
+    "rho0": 2.0
+   },
+   "tune_psnr": 19.497046962884273,
+   "at_grid_edge": [
+    "rho0"
+   ]
+  },
+  "1.0": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 1.0
+   },
+   "tune_psnr": 20.259334285026462,
+   "at_grid_edge": [
+    "rho0"
+   ]
+  },
+  "2.0": {
+   "params": {
+    "lam": 1.0000000000000002,
+    "rho0": 0.5
+   },
+   "tune_psnr": 21.044372534566214,
+   "at_grid_edge": [
+    "rho0"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 0.25
+   },
+   "tune_psnr": 21.8324955390026,
+   "at_grid_edge": [
+    "rho0"
+   ]
+  }
+ },
+ "A3_bm3d_wavelet@bin3": {
+  "0.1": {
+   "params": {
+    "lam1": 1.0,
+    "rho0": 10.0,
+    "lam2": 0.7905694150420949
+   },
+   "tune_psnr": 17.249930721202286,
+   "at_grid_edge": [
+    "lam2"
+   ]
+  },
+  "0.2": {
+   "params": {
+    "lam1": 0.9999999999999999,
+    "rho0": 5.0,
+    "lam2": 0.5590169943749475
+   },
+   "tune_psnr": 17.856819540214296,
+   "at_grid_edge": [
+    "lam2"
+   ]
+  },
+  "0.5": {
+   "params": {
+    "lam1": 1.0000000000000002,
+    "rho0": 2.0,
+    "lam2": 0.3535533905932738
+   },
+   "tune_psnr": 18.291233646608596,
+   "at_grid_edge": [
+    "lam2"
+   ]
+  },
+  "1.0": {
+   "params": {
+    "lam1": 1.0,
+    "rho0": 1.0,
+    "lam2": 0.25
+   },
+   "tune_psnr": 18.76175145709331,
+   "at_grid_edge": [
+    "lam2"
+   ]
+  },
+  "2.0": {
+   "params": {
+    "lam1": 1.0000000000000002,
+    "rho0": 0.5,
+    "lam2": 0.1767766952966369
+   },
+   "tune_psnr": 19.22769130013958,
+   "at_grid_edge": [
+    "lam2"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "lam1": 1.0,
+    "rho0": 0.25,
+    "lam2": 0.125
+   },
+   "tune_psnr": 19.747472326939267,
+   "at_grid_edge": [
+    "lam2"
+   ]
+  }
+ },
+ "A2_wavelet_dict@bin3": {
+  "0.1": {
+   "params": {
     "lam": 0.5,
     "rho0": 5.0
    },
-   "tune_psnr": 18.397072353279697,
+   "tune_psnr": 17.284796767954013,
    "at_grid_edge": []
   },
   "0.2": {
@@ -1565,97 +1695,368 @@
     "lam": 0.5,
     "rho0": 2.5
    },
-   "tune_psnr": 19.333759239354748,
+   "tune_psnr": 18.275987116400266,
    "at_grid_edge": []
   },
   "0.5": {
    "params": {
-    "lam": 0.5,
-    "rho0": 1.0
+    "lam": 0.25,
+    "rho0": 0.5
    },
-   "tune_psnr": 20.336869132220087,
+   "tune_psnr": 19.566839375232007,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "1.0": {
+   "params": {
+    "lam": 0.25,
+    "rho0": 0.25
+   },
+   "tune_psnr": 20.544166786005924,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "2.0": {
+   "params": {
+    "lam": 0.25,
+    "rho0": 0.125
+   },
+   "tune_psnr": 21.193302814300456,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "lam": 0.25,
+    "rho0": 0.0625
+   },
+   "tune_psnr": 21.83267079083529,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  }
+ },
+ "A2_pixel_dict@bin3": {
+  "0.1": {
+   "params": {
+    "lam": 0.5,
+    "rho0": 5.0
+   },
+   "tune_psnr": 17.48582347438576,
+   "at_grid_edge": []
+  },
+  "0.2": {
+   "params": {
+    "lam": 0.5,
+    "rho0": 2.5
+   },
+   "tune_psnr": 18.476660499736816,
+   "at_grid_edge": []
+  },
+  "0.5": {
+   "params": {
+    "lam": 0.25,
+    "rho0": 0.5
+   },
+   "tune_psnr": 19.793351029466066,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "1.0": {
+   "params": {
+    "lam": 0.25,
+    "rho0": 0.25
+   },
+   "tune_psnr": 20.667434461856452,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "2.0": {
+   "params": {
+    "lam": 0.25,
+    "rho0": 0.125
+   },
+   "tune_psnr": 21.30325128987391,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "lam": 0.25,
+    "rho0": 0.0625
+   },
+   "tune_psnr": 21.939603347665358,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  }
+ },
+ "p4ip_bm3d": {
+  "0.1": {
+   "params": {
+    "lam": 2.0,
+    "rho0": 20.0
+   },
+   "tune_psnr": 16.07039661779582,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "0.2": {
+   "params": {
+    "lam": 2.0,
+    "rho0": 10.0
+   },
+   "tune_psnr": 19.001863533402663,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "0.5": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 2.0
+   },
+   "tune_psnr": 20.241849808184405,
    "at_grid_edge": []
   },
   "1.0": {
    "params": {
-    "lam": 0.5,
-    "rho0": 0.5
+    "lam": 1.0,
+    "rho0": 1.0
    },
-   "tune_psnr": 21.05554076655984,
+   "tune_psnr": 21.18768005760908,
    "at_grid_edge": []
   },
   "2.0": {
    "params": {
-    "lam": 0.5,
-    "rho0": 0.25
+    "lam": 1.0,
+    "rho0": 0.5
    },
-   "tune_psnr": 21.90151409838736,
+   "tune_psnr": 21.980263279152943,
    "at_grid_edge": []
   },
   "4.0": {
    "params": {
-    "lam": 0.5,
-    "rho0": 0.125
+    "lam": 1.0,
+    "rho0": 0.25
    },
-   "tune_psnr": 22.906227405147423,
+   "tune_psnr": 22.893845821231537,
    "at_grid_edge": []
   }
  },
- "A3_bm3d_wavelet@bin3": {
+ "A3_bm3d_wavelet": {
   "0.1": {
    "params": {
-    "lam1": 0.5,
-    "rho0": 5.0,
-    "lam2": 0.39528470752104744
+    "lam1": 2.0,
+    "rho0": 20.0,
+    "lam2": 6.324555320336759
    },
-   "tune_psnr": 18.29983968067363,
+   "tune_psnr": 17.419711524530683,
    "at_grid_edge": [
     "lam2"
    ]
   },
   "0.2": {
    "params": {
-    "lam1": 0.5,
-    "rho0": 2.5,
-    "lam2": 0.2795084971874737
+    "lam1": 2.0,
+    "rho0": 10.0,
+    "lam2": 4.47213595499958
    },
-   "tune_psnr": 19.241905843811278,
+   "tune_psnr": 19.106492934472257,
    "at_grid_edge": [
     "lam2"
    ]
   },
   "0.5": {
    "params": {
-    "lam1": 0.5,
-    "rho0": 1.0,
-    "lam2": 0.1767766952966369
+    "lam1": 1.0,
+    "rho0": 2.0,
+    "lam2": 0.3535533905932738
    },
-   "tune_psnr": 20.07575341416984,
+   "tune_psnr": 20.210110041745132,
    "at_grid_edge": [
     "lam2"
    ]
   },
   "1.0": {
    "params": {
-    "lam1": 0.5,
-    "rho0": 0.5,
-    "lam2": 0.125
+    "lam1": 1.0,
+    "rho0": 1.0,
+    "lam2": 0.25
    },
-   "tune_psnr": 20.78503472136569,
+   "tune_psnr": 21.190270298196037,
    "at_grid_edge": [
     "lam2"
    ]
   },
   "2.0": {
    "params": {
-    "lam1": 0.5,
-    "rho0": 0.25,
-    "lam2": 0.08838834764831845
+    "lam1": 1.0,
+    "rho0": 0.5,
+    "lam2": 0.1767766952966369
    },
-   "tune_psnr": 21.46029563200508,
+   "tune_psnr": 21.925525591987515,
    "at_grid_edge": [
     "lam2"
    ]
+  },
+  "4.0": {
+   "params": {
+    "lam1": 1.0,
+    "rho0": 0.25,
+    "lam2": 0.125
+   },
+   "tune_psnr": 22.833618991137683,
+   "at_grid_edge": [
+    "lam2"
+   ]
+  }
+ },
+ "A2_wavelet_dict": {
+  "0.1": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 10.0
+   },
+   "tune_psnr": 16.138156626756714,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "0.2": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 5.0
+   },
+   "tune_psnr": 18.13398858376938,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "0.5": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 2.0
+   },
+   "tune_psnr": 19.513186167071115,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "1.0": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 1.0
+   },
+   "tune_psnr": 20.373809901004236,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "2.0": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 0.5
+   },
+   "tune_psnr": 21.007218242791403,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "lam": 0.5,
+    "rho0": 0.125
+   },
+   "tune_psnr": 21.886948791210475,
+   "at_grid_edge": []
+  }
+ },
+ "A2_pixel_dict": {
+  "0.1": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 10.0
+   },
+   "tune_psnr": 15.745649481621022,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "0.2": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 5.0
+   },
+   "tune_psnr": 18.009551868170025,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "0.5": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 2.0
+   },
+   "tune_psnr": 19.567565316494523,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "1.0": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 1.0
+   },
+   "tune_psnr": 20.493862074478333,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "2.0": {
+   "params": {
+    "lam": 1.0,
+    "rho0": 0.5
+   },
+   "tune_psnr": 21.186210043021248,
+   "at_grid_edge": [
+    "lam",
+    "rho0"
+   ]
+  },
+  "4.0": {
+   "params": {
+    "lam": 0.5,
+    "rho0": 0.125
+   },
+   "tune_psnr": 22.279964400038644,
+   "at_grid_edge": []
   }
  }
 }
