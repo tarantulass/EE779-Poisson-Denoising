@@ -65,9 +65,10 @@ def tuned_params(method, peak, b):
 def evaluate(methods, peaks, reps, b, workers, force=False):
     out = os.path.join(RESULTS, f"test_bin{b}.csv" if b else "test.csv")
     done = set()
-    if force and os.path.exists(out):  # drop earlier rows of these methods
+    if force and os.path.exists(out):  # drop earlier rows of these methods at these peaks
         with open(out) as f:
-            keep = [r for r in csv.DictReader(f) if r["method"] not in methods]
+            keep = [r for r in csv.DictReader(f)
+                    if not (r["method"] in methods and float(r["peak"]) in [float(p) for p in peaks])]
         with open(out, "w", newline="") as f:
             w = csv.DictWriter(f, FIELDS); w.writeheader(); w.writerows(keep)
     if os.path.exists(out):

@@ -36,15 +36,14 @@ def none(peak, tuned):
 
 
 def p4ip_sigma_grid(peak, tuned):
-    # A first 3x3 grid s in (0.5, 1, 2) x r in (1, 4, 16) on the binned data always chose s = 1 and
-    # the smallest r, so the grid is s = 1 with smaller r. Each run costs 70 denoiser calls.
-    return [{"lam": float(r), "rho0": float(r / peak)} for r in (0.25, 0.5, 1, 2)]
+    # A first 3x3 grid s in (0.5, 1, 2) x r in (1, 4, 16) on the binned data always chose s = 1, so
+    # the grid is s = 1 and r only. Each run costs 70 denoiser calls.
+    return [{"lam": float(r), "rho0": float(r / peak)} for r in (0.25, 0.5, 1, 2, 4)]
 
 
 def dict_sigma_grid(peak, tuned):
-    # The A2 dictionary priors chose the smallest r of p4ip_sigma_grid from peak 0.5 up (3x3 binned),
-    # so their grid extends to smaller r.
-    return [{"lam": float(r), "rho0": float(r / peak)} for r in (0.0625, 0.125, 0.25, 0.5, 1)]
+    # The A2 dictionary priors need smaller r than BM3D at high peaks, so their grid extends lower.
+    return [{"lam": float(r), "rho0": float(r / peak)} for r in (0.0625, 0.125, 0.25, 0.5, 1, 2)]
 
 
 def wavelet_grid(peak, tuned):
