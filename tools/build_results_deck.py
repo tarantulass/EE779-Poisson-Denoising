@@ -189,7 +189,7 @@ def style_chart(ch, ytitle):
 
 
 def line_chart(s, pt, methods, x, y, w, h, ymin, ymax):
-    methods = [m for m in methods if m in pt.index]
+    methods = [m for m in methods if m in pt.index and not pt.loc[m].isna().any()]
     cd = CategoryChartData(); cd.categories = PL
     for m in methods:
         cd.add_series(NAME[m], [float(pt.loc[m, p]) for p in PEAKS])
@@ -279,7 +279,7 @@ table(s, rows, 0.5, 1.05, 9.0, [2.3, 2.5, 1.4, 1.4, 1.4], size=10, row_h=0.25, r
 lead = [p for p in (0.1, 0.2, 1.0) if tune_psnr("p4ip_bm3d", p) > tune_psnr("anscombe_bm3d", p)]
 spda_lead = [p for p in (0.1, 0.2, 1.0) if tune_psnr("spda", p) > tune_psnr("p4ip_bm3d", p)]
 text(s, "Same peaks and PSNR definition as the paper; different images and our own implementations. On our tuning images "
-        f"P4IP + BM3D beats Anscombe + BM3D at peaks {', '.join(f'{p:g}' for p in lead)}, as in the paper; "
+        f"P4IP + BM3D beats Anscombe + BM3D at peaks {', '.join(f'{p:g}' for p in lead)} (test images: {', '.join(f'{p:g}' for p in (0.1, 0.2, 1.0) if P0.loc['p4ip_bm3d', p] > P0.loc['anscombe_bm3d', p])}), as in the paper; "
         f"SPDA beats P4IP + BM3D at peak {', '.join(f'{p:g}' for p in spda_lead) or 'none'}.",
      0.5, 4.2, 9.0, 0.55, 11)
 text(s, "Source: Rond, Giryes, Elad, arXiv:1511.02500 v1, Table 1 (no binning). Tuning-image values: results/tuned_params.json.",
@@ -289,23 +289,23 @@ text(s, "Source: Rond, Giryes, Elad, arXiv:1511.02500 v1, Table 1 (no binning). 
 s = new_slide("PSNR vs peak on the test images, no binning")
 line_chart(s, P0, ["anscombe_bm3d", "p4ip_bm3d", "spda", "A1_subband", "A3_bm3d_wavelet", "A2_wavelet_dict",
                    "B_fista_dict", "gaussian_filter", "poisson_tv"], 0.5, 1.05, 9.0, 3.7, 12, 24)
-text(s, "Mean over 8 test images. Up to peak 0.5, strong averaging (SPDA, per-level wavelet prior, Gaussian filter) beats "
-        "Anscombe + BM3D; from peak 1 up Anscombe + BM3D is best of the methods shown.", 0.5, 4.8, 9.0, 0.45, 11)
+text(s, "Mean over 8 test images. P4IP + BM3D beats Anscombe + BM3D up to peak 1; strong averaging (SPDA, Gaussian filter) "
+        "is competitive at the lowest peaks; Anscombe + BM3D is best at peaks 2 and 4.", 0.5, 4.8, 9.0, 0.45, 11)
 
 
 # ------------------------------------------------------------------ 6/7. full tables
 def full_table(pt, title, note, tune_key_suffix=""):
     s = new_slide(title)
     ms = [m for m in ORDER if m in pt.index]
-    best = {p: pt.loc[ms, p].max() for p in PEAKS}
+    best = {p: pt.loc[ms, p].max(skipna=True) for p in PEAKS}
     rows = [["Method", *[f"peak {p}" for p in PL]]]
     bold = []
     for i, m in enumerate(ms, start=1):
-        rows.append([NAME[m], *[f2(pt.loc[m, p]) for p in PEAKS]])
+        rows.append([NAME[m] + (" (partial)" if pt.loc[m].isna().any() else ""), *[f2(pt.loc[m, p]) for p in PEAKS]])
         bold += [(i, j + 1) for j, p in enumerate(PEAKS) if pt.loc[m, p] == best[p]]
     for m in ORDER:
         if m not in pt.index:
-            rows.append([NAME[m] + " (running)", *["–"] * 6])
+            rows.append([NAME[m] + " (not run)", *["–"] * 6])
     table(s, rows, 0.5, 0.98, 9.0, [3.3] + [0.95] * 6, size=8.5, row_h=0.19, bold_cells=bold)
     text(s, note, 0.5, 5.02, 9.0, 0.22, 9)
     return s
@@ -324,8 +324,8 @@ bold = [(i, j + 1) for i, m in enumerate(TM, 1) for j in range(6) if vals[m][j] 
 for m in TM:
     rows.append([NAME[m], *[f2(v) for v in vals[m]]])
 table(s, rows, 0.5, 1.13, 9.0, [3.3] + [0.95] * 6, size=10.5, row_h=0.28, bold_cells=bold)
-text(s, ["Mean PSNR over the 4 tuning images at the tuned parameters (results/tuned_params.json). The test-image runs "
-         "of these four P4IP-type methods without binning were still running when this deck was built.",
+text(s, ["Mean PSNR over the 4 tuning images at the tuned parameters (results/tuned_params.json). "
+         "Test-image results without binning: P4IP + BM3D complete, A3 " + ("complete" if "A3_bm3d_wavelet" in has0 and not P0.loc["A3_bm3d_wavelet"].isna().any() else "partial") + ", A2 not run (too slow; binned test results are on the binned table).",
          f"P4IP + BM3D beats Anscombe + BM3D at peaks {', '.join(PL[i] for i in range(6) if vals['p4ip_bm3d'][i] > vals['anscombe_bm3d'][i])}. "
          f"A3 beats P4IP + BM3D at peaks {', '.join(PL[i] for i in range(6) if round(vals['A3_bm3d_wavelet'][i], 2) > round(vals['p4ip_bm3d'][i], 2))}. Bold: best per peak."],
      0.5, 3.45, 9.0, 1.3, 12, gap=8)
@@ -338,15 +338,19 @@ rows = [["", *[f"peak {p}" for p in PL]]]
 rows.append(["P4IP + BM3D, tuning", *[f2(tune_psnr("p4ip_bm3d", p)) for p in PEAKS]])
 rows.append(["A3 BM3D + wavelet, tuning", *[f2(tune_psnr("A3_bm3d_wavelet", p)) for p in PEAKS]])
 rows.append(["Difference", *[f"{tune_psnr('A3_bm3d_wavelet', p) - tune_psnr('p4ip_bm3d', p):+.2f}" for p in PEAKS]])
+if "A3_bm3d_wavelet" in has0 and "p4ip_bm3d" in has0:
+    rows.append(["P4IP + BM3D, test", *[f2(P0.loc["p4ip_bm3d", p]) for p in PEAKS]])
+    rows.append(["A3 BM3D + wavelet, test", *[f2(P0.loc["A3_bm3d_wavelet", p]) for p in PEAKS]])
 if "A3_bm3d_wavelet" in has3 and "p4ip_bm3d" in has3:
     rows.append(["P4IP + BM3D, test, 3×3 binned", *[f2(P3.loc["p4ip_bm3d", p]) for p in PEAKS]])
     rows.append(["A3 BM3D + wavelet, test, 3×3 binned", *[f2(P3.loc["A3_bm3d_wavelet", p]) for p in PEAKS]])
-table(s, rows, 0.5, 1.6, 9.0, [3.3] + [0.95] * 6, size=10.5, row_h=0.28, bold_cells=[(3, 1), (3, 2)])
+table(s, rows, 0.5, 1.55, 9.0, [3.3] + [0.95] * 6, size=10, row_h=0.25, bold_cells=[(3, 1), (3, 2)])
 d01 = tune_psnr("A3_bm3d_wavelet", 0.1) - tune_psnr("p4ip_bm3d", 0.1)
-text(s, [f"Without binning the wavelet prior adds {d01:.2f} dB at peak 0.1 and {tune_psnr('A3_bm3d_wavelet', 0.2) - tune_psnr('p4ip_bm3d', 0.2):.2f} dB at 0.2; "
+d01t = P0.loc["A3_bm3d_wavelet", 0.1] - P0.loc["p4ip_bm3d", 0.1] if "A3_bm3d_wavelet" in has0 else float("nan")
+text(s, [f"Without binning the wavelet prior adds {d01:.2f} dB at peak 0.1 on the tuning images ({d01t:+.2f} dB on the test images) and {tune_psnr('A3_bm3d_wavelet', 0.2) - tune_psnr('p4ip_bm3d', 0.2):.2f} dB at 0.2; "
          "from peak 0.5 up the tuned wavelet weight is the smallest tried and A3 equals P4IP + BM3D.",
-         "With binning A3 is worse at every peak. Both binned runs used an older P4IP grid whose best ρ₀ lay at the grid edge; they are being re-tuned."],
-     0.5, 3.45, 9.0, 1.3, 12, gap=8)
+         "With binning A3 is worse at every peak. Both binned runs used an older P4IP grid whose best ρ₀ lay at the grid edge, so the binned P4IP-type numbers are a lower bound."],
+     0.5, 3.75, 9.0, 1.2, 11, gap=6)
 
 # ------------------------------------------------------------------ 10. direction A overview
 s = new_slide("Direction A: changing the P4IP prior")
@@ -468,8 +472,9 @@ for i, (k, lab) in enumerate(tiles):
 s = new_slide("Conclusions")
 text(s, [
     f"The exact unbiased inverse matters: {min(gap):.1f} to {max(gap):.1f} dB over the algebraic inverse.",
-    f"Replication: on our tuning images P4IP + BM3D beats Anscombe + BM3D at peaks {', '.join(f'{p:g}' for p in lead)}, as the paper reports.",
-    f"Multiple priors: BM3D + wavelet improves P4IP + BM3D by {d01:.2f} dB at peak 0.1 (tuning images); no gain from peak 0.5 up.",
+    f"Replication: on the test images P4IP + BM3D beats Anscombe + BM3D at peaks {', '.join(f'{p:g}' for p in PEAKS if P0.loc['p4ip_bm3d', p] > P0.loc['anscombe_bm3d', p])} "
+    f"(+{P0.loc['p4ip_bm3d', 0.1] - P0.loc['anscombe_bm3d', 0.1]:.2f} dB at peak 0.1), as the paper reports; Anscombe + BM3D is better at the highest peaks.",
+    f"Multiple priors: BM3D + wavelet improves P4IP + BM3D at peak 0.1 by {d01:.2f} dB (tuning) and {d01t:+.2f} dB (test); no gain from peak 0.5 up.",
     f"A1: per-level wavelet thresholds add up to {max(a1):.1f} dB; the wavelet prior alone stays below BM3D above peak 0.5.",
     "A2: the wavelet-patch dictionary is not better than the pixel dictionary.",
     f"Direction B: FISTA reaches the ISTA solution in {min(ratio):.1f} to {max(ratio):.1f}× fewer iterations; without binning the tuned problem is trivial.",
@@ -481,7 +486,7 @@ s = new_slide("Limitations and reproduction")
 text(s, [
     "One noise draw per image; 8 test images, so a paired test can reach at best p = 0.0078.",
     "SPDA is simplified (fixed sparsity, k-means groups, 3 rounds). Our Anscombe + BM3D is below the paper's numbers.",
-    "Parameters at the edge of their grid are flagged in the tuning log; the binned P4IP-type runs are being re-tuned on wider grids (run_fix.sh).",
+    "Some tuned parameters lie at the edge of their grid (flagged in the tuning log), mainly for the binned P4IP-type runs and A2. A2 without binning was tuned but not run on the test images (about 25 min per image).",
     [("Reproduce: ", True), ("python -m experiments.tune / evaluate --methods all [--bin 3]; python -m experiments.evaluate --summary", False)],
     [("AI use: ", True), ("code, README and this deck were written with Claude (Anthropic) following our proposal deck; every number is read from the result logs.", False)],
 ], 0.5, 1.13, 9.0, 3.9, 13, gap=9)
