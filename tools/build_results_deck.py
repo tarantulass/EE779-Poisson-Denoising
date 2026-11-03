@@ -423,27 +423,37 @@ s = new_slide("Real data: FMD fluorescence microscopy", REFS["fmd"])
 fmd_path = f"{RES}/fmd.csv"
 if os.path.exists(fmd_path):
     F = pd.read_csv(fmd_path)
-    agg = F.groupby("method").agg(psnr=("psnr", "mean"), ssim=("ssim", "mean"), n=("psnr", "size"))
-    order = [m for m in ["noisy", "gaussian_filter", "anscombe_bm3d", "spda", "A1_subband", "B_fista_dict", "p4ip_bm3d", "A3_bm3d_wavelet"] if m in agg.index]
+    sub = set(F[F.method == "p4ip_bm3d"].image) & set(F[F.method == "A3_bm3d_wavelet"].image)
+    order = [m for m in ["noisy", "gaussian_filter", "A1_subband", "B_fista_dict", "spda", "anscombe_bm3d", "p4ip_bm3d", "A3_bm3d_wavelet"] if m in set(F.method)]
     nm = dict(NAME, noisy="Noisy raw capture")
-    bestp = agg.loc[[m for m in order if m != "noisy"], "psnr"].max()
-    rows = [["Method", "PSNR (dB)", "SSIM", "images"]]
+    Fs = F[F.image.isin(sub)]
+    ps = Fs.groupby("method").psnr.mean(); ss = Fs.groupby("method").ssim.mean(); pa = F.groupby("method").psnr.mean()
+    best = ps.drop("noisy", errors="ignore").max()
+    rows = [["Method", f"PSNR, {len(sub)} images", "SSIM", "PSNR, all 48"]]
     bold = []
     for i, m in enumerate(order, 1):
-        rows.append([nm[m], f"{agg.loc[m, 'psnr']:.2f}", f"{agg.loc[m, 'ssim']:.3f}", f"{agg.loc[m, 'n']:.0f}"])
-        if agg.loc[m, "psnr"] == bestp:
-            bold += [(i, 1)]
-    table(s, rows, 0.5, 1.05, 5.2, [2.9, 0.9, 0.8, 0.6], size=10, row_h=0.28, bold_cells=bold)
+        full = (F.method == m).sum() == 48
+        rows.append([nm[m], f2(ps.get(m)), f2(ss.get(m)) if m in ss else "–", f2(pa[m]) if full else "–"])
+        if ps.get(m) == best:
+            bold.append((i, 1))
+    table(s, rows, 0.5, 1.0, 5.3, [2.6, 1.0, 0.75, 0.95], size=9.5, row_h=0.25, bold_cells=bold)
     nz = F[F.method == "noisy"]
-    text(s, [f"48 real images (confocal, two-photon, wide-field); ground truth = average of 50 captures; central 256 × 256 crop as in FMD.",
-             f"Noise is Poisson-Gaussian, Var = a·u + b, fitted per image (median a = {nz.a.median():.1f}, b = {nz.b.median():.1f}). "
-             f"y = z/a + b/a² is then approximately Poisson; effective peak {nz.peak_eff.median():.0f} (median).",
-             "No tuning on FMD: parameters are transferred from the synthetic tuning (nearest peak, peak-scaled)."],
-         5.9, 1.05, 3.6, 3.8, 10.5, gap=6)
+    d_pa = (Fs[Fs.method == "p4ip_bm3d"].set_index("image").psnr - Fs[Fs.method == "anscombe_bm3d"].set_index("image").psnr).dropna()
+    d_a3 = (Fs[Fs.method == "A3_bm3d_wavelet"].set_index("image").psnr - Fs[Fs.method == "p4ip_bm3d"].set_index("image").psnr).dropna()
+    wf = d_pa[d_pa.index.str.startswith("WideField")]; ot = d_pa[~d_pa.index.str.startswith("WideField")]
+    bw = nz[nz.image.str.startswith("WideField")].b.median(); bo = nz[~nz.image.str.startswith("WideField")].b.median()
+    p_pa = wilcoxon(d_pa).pvalue
+    text(s, [f"48 real images (confocal, two-photon, wide-field); ground truth = average of 50 captures; central 256 × 256 crop. "
+             f"Fitted Var = a·u + b gives effective peaks {nz.peak_eff.quantile(0.1):.0f} to {nz.peak_eff.quantile(0.9):.0f} photons.",
+             f"P4IP vs Anscombe + BM3D: {d_pa.mean():+.2f} dB on average, not significant (p = {p_pa:.2f}). It depends on the microscope: "
+             f"P4IP wins all {len(wf)} wide-field images ({wf.min():+.1f} to {wf.max():+.1f} dB), Anscombe + BM3D wins {(ot < 0).sum()} of {len(ot)} confocal and two-photon images.",
+             f"The wide-field captures carry strong Gaussian read noise (median b = {bw:.0f} vs {bo:.0f}); we did not isolate why P4IP handles them better.",
+             f"A3 vs P4IP: {d_a3.mean():+.2f} dB, again largest on wide-field. No FMD tuning: parameters transferred from synthetic peak 4."],
+         5.95, 1.0, 3.55, 3.9, 9, gap=4)
 else:
     text(s, "FMD runs in progress.", 0.5, 1.2, 9.0, 0.4, 14)
 text(s, "PSNR on the 8-bit scale, 10 log₁₀(255²/MSE), as in the FMD benchmark. Source: results/fmd.csv.", 0.5, 4.85, 9.0, 0.25, 9)
-say(s, "60 seconds", "Real fluorescence images also have camera read noise. Fitting the gain and read noise per image turns the data into approximately Poisson counts, so every method runs unchanged.",
+say(s, "60 seconds", "Real fluorescence images also have camera read noise. Fitting the gain and read noise per image turns the data into approximately Poisson counts, so every method runs unchanged. The ranking depends on the microscope, which is itself a finding.",
     "With the baseline established, here are our own proposals.")
 
 # ---------------------------------------------------------------- 13. direction A idea
@@ -508,7 +518,8 @@ text(s, [f"At peak 0.1 the wavelet prior adds {P0.loc['A3_bm3d_wavelet', 0.1] - 
          + (f" ({pa3[1]}/{pa3[2]} images better, Wilcoxon p = {pa3[3]:.4f})" if pa3 else "") + ".",
          "Why: at peak 0.1 most patches are zeros, so BM3D's block matching groups unrelated patches and leaves blotches. "
          "Wavelet shrinkage gives a stable smooth estimate; averaging the two in the consensus step damps BM3D's errors.",
-         "From peak 0.5 up, matching is reliable, the wavelet prior only adds blur, and the tuning drives its weight to the smallest value tried: A3 → P4IP + BM3D."],
+         (lambda d: f"From peak 0.2 up A3 is {min(d):.2f} to {max(d):.2f} dB below P4IP + BM3D. Why: block matching is reliable there, so the wavelet prior only adds blur; "
+          "the tuning picked the smallest wavelet weight tried, which is small but not zero.")([P0.loc['p4ip_bm3d', p] - P0.loc['A3_bm3d_wavelet', p] for p in PEAKS[1:]])],
      0.5, 2.6, 9.0, 2.3, 11.5, gap=7)
 say(s, "60 seconds", "This is the positive result of Direction A: the multiple-prior extension helps exactly where we predicted, and tuning switches it off where it would hurt.",
     "Direction B takes a different route: an explicit sparse model.")
@@ -540,7 +551,7 @@ say(s, "70 seconds", "Both solvers minimise the same convex objective, so they m
 s = new_slide("All methods: PSNR vs peak (test images)")
 line_chart(s, P0, ["anscombe_bm3d", "p4ip_bm3d", "spda", "A1_subband", "A3_bm3d_wavelet", "B_fista_dict",
                    "gaussian_filter", "poisson_tv"], 0.5, 1.05, 9.0, 3.6, 12, 24)
-text(s, "No binning, mean over 8 test images (A3 shown once complete). Lowest light: P4IP-type and smoothing methods lead; "
+text(s, "No binning, mean over 8 test images. Lowest light: P4IP-type and smoothing methods lead; "
         "highest peaks: Anscombe + BM3D leads, as its Gaussian approximation becomes accurate.", 0.5, 4.72, 9.0, 0.5, 11)
 say(s, "40 seconds", "The crossover between P4IP and Anscombe + BM3D happens between peaks 1 and 2, where the Anscombe approximation becomes good.",
     "What we conclude from all of this.")
@@ -550,18 +561,19 @@ s = new_slide("Major findings")
 p4 = [p for p in PEAKS if P0.loc["p4ip_bm3d", p] > P0.loc["anscombe_bm3d", p]]
 text(s, [f"1.  Replication: P4IP + BM3D beats Anscombe + BM3D at peaks {', '.join(f'{p:g}' for p in p4)}; on shared images it matches the paper within 0.31 dB from peak 0.2.",
          f"2.  The exact unbiased inverse Anscombe is essential: {min(gap):.1f} to {max(gap):.1f} dB over the algebraic inverse.",
-         "3.  Multiple priors (BM3D + wavelet) improve P4IP at the lowest light and switch themselves off above it.",
+         f"3.  Multiple priors (BM3D + wavelet) improve P4IP at peak 0.1 ({P0.loc['A3_bm3d_wavelet', 0.1] - P0.loc['p4ip_bm3d', 0.1]:+.2f} dB, 8/8 images) and cost at most {max(P0.loc['p4ip_bm3d', p] - P0.loc['A3_bm3d_wavelet', p] for p in PEAKS[1:]):.2f} dB above it.",
          f"4.  Per-level wavelet thresholds add up to {max(a1):.1f} dB; learned wavelet-domain dictionaries do not beat pixel dictionaries.",
          f"5.  FISTA reaches the ISTA solution in {min(ratio):.1f} to {max(ratio):.1f}× fewer iterations; the explicit sparse model needs binning to be useful.",
-         "6.  No method wins at every peak: the best prior depends on the photon count."],
-     0.5, 1.13, 9.0, 3.9, 13, gap=7)
+         "6.  No method wins at every peak: the best prior depends on the photon count. On real FMD data (10+ photons) P4IP + BM3D and "
+         "Anscombe + BM3D are level on average; P4IP wins on wide-field images, Anscombe + BM3D on confocal and two-photon."],
+     0.5, 1.13, 9.0, 3.9, 12.5, gap=6)
 say(s, "60 seconds", "Six findings, each backed by a slide earlier in the talk.", "And what we would do next.")
 
 # ---------------------------------------------------------------- 20. future directions
 s = new_slide("Limitations and future directions")
 text(s, [[("Limitations", True)],
          "One noise draw per image; 8 test images. Simplified SPDA. Python BM3D instead of the authors' code.",
-         "Some tuned parameters lie at the edge of their grid (flagged in the logs); binned P4IP-type runs used an early grid.",
+         "Some tuned parameters lie at the edge of their grid (flagged in the logs); binned P4IP-type runs used an early grid. FMD: P4IP-type methods and SPDA on a subset (about 4 min per image), no FMD-specific tuning.",
          [("Future directions", True)],
          "Choose the prior weight per image or per region from the photon count (A3 switches itself off already).",
          "Learned (CNN) denoisers inside P4IP; multiple noise draws; the full FMD set with tuned parameters.",

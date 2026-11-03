@@ -3,3 +3,4 @@ __pycache__/
 .venv/
 results/*/estimates/
 .pytest_cache/
+data/fmd/

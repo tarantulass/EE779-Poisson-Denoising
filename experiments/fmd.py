@@ -114,12 +114,13 @@ def main():
     ap.add_argument("--data", default=os.path.join(REPO, "data", "fmd", "test_mix"))
     ap.add_argument("--methods", nargs="*", default=FMD_METHODS)
     ap.add_argument("--limit", type=int, default=0, help="use only the first N images (0 = all 48)")
+    ap.add_argument("--pattern", default="*.png", help="e.g. '*_1.png': one field of view per configuration (12 images)")
     ap.add_argument("--workers", type=int, default=os.cpu_count())
     ap.add_argument("--summary", action="store_true")
     a = ap.parse_args()
     if a.summary:
         return summary()
-    gts = sorted(glob.glob(os.path.join(a.data, "gt", "*.png")))
+    gts = sorted(glob.glob(os.path.join(a.data, "gt", a.pattern)))
     if a.limit:
         gts = gts[:a.limit]
     done = set()

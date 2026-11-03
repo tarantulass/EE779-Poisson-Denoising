@@ -131,3 +131,11 @@ iteration makes x and v agree by the end (70 iterations, as in the paper).
 **Runtime?**
 Anscombe + BM3D: seconds per image. P4IP + BM3D: 70 BM3D calls, a few minutes per image on one core.
 SPDA (simplified): about 20 to 30 s. ISTA/FISTA: under a second to tens of seconds.
+
+**What did FMD show?**
+On 12 real images (one per microscope and sample type; effective peaks 13 to 86 photons), P4IP + BM3D and
+Anscombe + BM3D are level on average (not significant, p = 0.79). P4IP wins all three wide-field images
+(+1.6 to +2.1 dB); Anscombe + BM3D wins 8 of 9 confocal and two-photon images. The wide-field captures have
+strong Gaussian read noise (fitted b ≈ 90, against ≈ 0 for the others). We did not isolate why P4IP handles
+them better; say so if asked. A3 (BM3D + wavelet) is the highest on average (+0.14 dB over P4IP).
+Parameters were not tuned on FMD; they were transferred from the synthetic tuning at peak 4.
